@@ -88,7 +88,9 @@ export class PDF417HealthcareParser {
    * Get schema for specific form type
    */
   private getSchemaForForm(formCode: string): FormSchema | undefined {
-    return this.schemas.get(formCode);
+    // Normalize the form code before lookup (e.g., "06" -> "6")
+    const normalizedCode = this.normalizeFormCode(formCode);
+    return this.schemas.get(normalizedCode);
   }
 
   /**
@@ -152,7 +154,6 @@ export class PDF417HealthcareParser {
    */
   private initializeSchemas(): void {
     this.schemas.set('10', this.getMuster10Schema());
-    this.schemas.set('06', this.getMuster6Schema()); // Handle "06" as Muster 6
     this.schemas.set('6', this.getMuster6Schema());
     this.schemas.set('12', this.getMuster12Schema());
     this.schemas.set('16', this.getMuster16Schema());
@@ -300,6 +301,7 @@ export class PDF417HealthcareParser {
    * Get schema for a specific form (public method for debugging/testing)
    */
   public getFormSchema(formCode: string): FormSchema | undefined {
-    return this.schemas.get(formCode);
+    const normalizedCode = this.normalizeFormCode(formCode);
+    return this.schemas.get(normalizedCode);
   }
 }

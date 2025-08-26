@@ -8,12 +8,10 @@ import { PDF417HealthcareParser } from '@/lib/pdf417-parser';
 import { ParsedBarcodeData } from '@/types/healthcare';
 import { ImageDropzone } from './image-dropzone';
 import { ZXingTest } from './zxing-test';
-import { TestBarcodeData } from './test-barcode-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Keyboard, Camera } from 'lucide-react';
+import { Camera, TestTube2, FileText, Stethoscope, Activity } from 'lucide-react';
 
 interface BarcodeInputProps {
   onDataParsed: (data: ParsedBarcodeData | null) => void;
@@ -23,7 +21,7 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
   const [barcodeText, setBarcodeText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'manual' | 'image'>('image');
+  const [activeTab, setActiveTab] = useState<'test' | 'image'>('image');
   const parser = new PDF417HealthcareParser();
 
 
@@ -34,43 +32,57 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
     onDataParsed(null);
   };
 
-  const loadSampleData = () => {
-    // Sample Muster 10 (Laboratory Request) barcode data
-    const sampleData = [
-      '10', // formularcode
-      'a',  // formularcodeergaenzung
-      '01', // versionsnummer
-      'REQ12345', // anforderungsIdent
-      'Mustermann', // nachname
-      'Max', // vorname
-      '19850615', // geburtsdatum
-      '20241231', // versicherungsschutzEnde
-      '123456789', // kostentraegerkennung
-      'AOK Bayern', // kostentraegername
-      'BY', // wopKennzeichen
-      'A123456789', // versichertenId
-      '1', // versichertenart
-      '00', // besonderePersonengruppe
-      '01', // dmpKennzeichnung
-      '123456789', // bsnrErstveranlasser
-      '987654321', // lanrErstveranlasser
-      '123456789', // bsnrUeberweiser
-      '987654321', // lanrUeberweiser
-      '20241226', // ausstellungsdatum
-      'M', // geschlecht
-      'Dr.', // titel
-      '80331', // plz
-      'München', // ort
-      'Maximilianstraße', // strasse
-      '1', // hausnummer
-      'V70.9 - Routineuntersuchung', // diagnose
-      '', // verdachtsdiagnose
-      'Ja', // befundkopie
-      'Blutbild, Leberwerte' // auftrag
-    ].join('\t');
+  // Sample test data for all supported form types
+  const testData = {
+    '10': {
+      name: 'Muster 10 - Laborauftrag',
+      icon: TestTube2,
+      data: [
+        '10', 'a', '01', 'REQ12345', 'Mustermann', 'Max', '19850615', '20241231',
+        '123456789', 'AOK Bayern', 'BY', 'A123456789', '1', '00', '01',
+        '123456789', '987654321', '123456789', '987654321', '20241226', 'M',
+        'Dr.', '80331', 'München', 'Maximilianstraße', '1',
+        'V70.9 - Routineuntersuchung', '', 'Ja', 'Blutbild, Leberwerte'
+      ].join('\t')
+    },
+    '6': {
+      name: 'Muster 6 - Überweisung',
+      icon: FileText,
+      data: [
+        '06', '11', 'Leuthäuser', 'Angelika', '19740414', '', '105177505',
+        'Techniker Krankenkasse', '46', 'Y207887976', '1', '00', '00',
+        '409601100', '948301053', '20231116', 'W', '', '', '60322', 'Frankfurt',
+        'Sömmerringstr.', '12', 'D', '', '', '', '', '', '', 'Radiologie', '', '3',
+        '', 'bek. Multiple Sklerose, Thx: Thx- frei',
+        '', 'Erbitte cMRT OHNE Kontrast mit der Frage nach  Befunddynamik gegenüber der Vorbildgebung, Danke'
+      ].join('\t')
+    },
+    '12': {
+      name: 'Muster 12 - Häusliche Krankenpflege',
+      icon: Stethoscope,
+      data: [
+        '12', 'a', '01', 'Weber', 'Hans', '19401205', '20241231',
+        '555666777', 'Barmer GEK', 'C555666777', '1', '07',
+        '20241226', 'M', 'Hauptstraße', '15', '10115', 'Berlin'
+      ].join('\t')
+    },
+    '16': {
+      name: 'Muster 16 - Medizinische Rehabilitation',
+      icon: Activity,
+      data: [
+        '16', 'a', '01', 'Fischer', 'Maria', '19751120', '20241231',
+        '888999000', 'D888999000', '1', '20241226', 'W'
+      ].join('\t')
+    }
+  };
 
-    setBarcodeText(sampleData);
-    setError(null);
+  const loadTestData = (formCode: string) => {
+    const testFormData = testData[formCode as keyof typeof testData];
+    if (testFormData) {
+      setBarcodeText(testFormData.data);
+      setError(null);
+      handleParse(testFormData.data);
+    }
   };
 
     const handleImageScan = (barcodeData: string) => {
@@ -80,12 +92,7 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
     handleParse(barcodeData);
   };
 
-  const handleTestData = (testData: string) => {
-    console.log('[BarcodeInput] Received test data:', testData);
-    setBarcodeText(testData);
-    setError(null);
-    handleParse(testData);
-  };
+
 
   const handleParse = async (data?: string) => {
     const textToProcess = data || barcodeText.trim();
@@ -119,18 +126,9 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          PDF417 Barcode Parser
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadSampleData}
-          >
-            Load Sample
-          </Button>
-        </CardTitle>
+        <CardTitle>PDF417 Barcode Parser</CardTitle>
         <CardDescription>
-          Scan from image or enter PDF417 barcode data to parse healthcare form information
+          Scan from image or use test data to parse healthcare form information
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -161,15 +159,15 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
             Scan Image
           </button>
           <button
-            onClick={() => setActiveTab('manual')}
+            onClick={() => setActiveTab('test')}
             className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'manual'
+              activeTab === 'test'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Keyboard className="h-4 w-4 inline mr-2" />
-            Manual Input
+            <TestTube2 className="h-4 w-4 inline mr-2" />
+            Test Data
           </button>
         </div>
 
@@ -178,56 +176,76 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
           <ImageDropzone onBarcodeScanned={handleImageScan} />
         ) : (
           <div className="space-y-4">
-
-                    {/* Input Area */}
-            <div className="space-y-2">
-              <label htmlFor="barcode-input" className="text-sm font-medium">
-                Barcode Data (Tab-separated):
-              </label>
-              <Textarea
-                id="barcode-input"
-                placeholder="Paste or enter tab-separated barcode data here..."
-                value={barcodeText}
-                onChange={(e) => setBarcodeText(e.target.value)}
-                rows={4}
-                className="font-mono text-xs"
-              />
-              <div className="text-xs text-muted-foreground">
-                Example: 10	a	01	REQ123	Mustermann	Max	19850615	...
+            {/* Test Data Selection */}
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm">Select Form Type to Test:</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {Object.entries(testData).map(([formCode, formInfo]) => {
+                  const IconComponent = formInfo.icon;
+                  return (
+                    <Button
+                      key={formCode}
+                      onClick={() => loadTestData(formCode)}
+                      variant="outline"
+                      size="sm"
+                      className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-accent hover:text-accent-foreground"
+                      disabled={isLoading}
+                    >
+                      <IconComponent className="h-6 w-6" />
+                      <div className="text-center">
+                        <div className="font-medium">Form {formCode}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {formInfo.name}
+                        </div>
+                      </div>
+                    </Button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-              <Button
-                onClick={() => handleParse()}
-                disabled={isLoading || !barcodeText.trim()}
-              >
-                {isLoading ? 'Parsing...' : 'Parse Barcode'}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleClear}
-                disabled={!barcodeText && !error}
-              >
-                Clear
-              </Button>
-            </div>
-
-            {/* Data Preview */}
+            {/* Current Data Preview */}
             {barcodeText && (
               <div className="space-y-2">
-                <h4 className="font-medium text-sm">Data Preview:</h4>
-                <div className="rounded border p-2 bg-muted/50 text-xs font-mono max-h-20 overflow-y-auto">
-                  {barcodeText.split('\t').map((field, index) => (
-                    <div key={index} className="flex">
-                      <span className="w-8 text-muted-foreground">{index}:</span>
-                      <span className="break-all">{field || '(empty)'}</span>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-sm">Current Test Data:</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClear}
+                    className="text-xs"
+                  >
+                    Clear
+                  </Button>
+                </div>
+                <div className="rounded border p-3 bg-muted/50">
+                  <div className="text-xs font-mono space-y-1 max-h-32 overflow-y-auto">
+                    {barcodeText.split('\t').slice(0, 10).map((field, index) => (
+                      <div key={index} className="flex">
+                        <span className="w-8 text-muted-foreground shrink-0">{index}:</span>
+                        <span className="break-all">{field || '(empty)'}</span>
+                      </div>
+                    ))}
+                    {barcodeText.split('\t').length > 10 && (
+                      <div className="text-muted-foreground text-center py-1">
+                        ... and {barcodeText.split('\t').length - 10} more fields
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
+
+            {/* Instructions */}
+            <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-700">
+              <h4 className="font-medium mb-1">Test Data Information:</h4>
+              <ul className="space-y-1 list-disc list-inside">
+                <li>Click any form button to load and automatically parse test data</li>
+                <li>Test data includes realistic German healthcare form information</li>
+                <li>Form 6 uses the actual barcode data from your uploaded image</li>
+                <li>Each form type has different field requirements and validation</li>
+              </ul>
+            </div>
           </div>
         )}
 
@@ -237,9 +255,6 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-
-        {/* Test Data Component */}
-        <TestBarcodeData onTestDataSelected={handleTestData} />
 
         {/* Debug Test Component */}
         <ZXingTest />

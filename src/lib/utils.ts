@@ -37,5 +37,7 @@ export function validateDate(dateStr: string): boolean {
 }
 
 export function sanitizeInput(input: string): string {
-  return input.trim().replace(/[\t\n\r]/g, ' ');
+  // For PDF417 barcodes, preserve tabs as field separators
+  // Only remove newlines and carriage returns
+  return input.trim().replace(/[\n\r]/g, '');
 }
