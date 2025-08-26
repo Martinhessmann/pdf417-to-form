@@ -8,6 +8,7 @@ import { PDF417HealthcareParser } from '@/lib/pdf417-parser';
 import { ParsedBarcodeData } from '@/types/healthcare';
 import { ImageDropzone } from './image-dropzone';
 import { ZXingTest } from './zxing-test';
+import { TestBarcodeData } from './test-barcode-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -73,9 +74,17 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
   };
 
     const handleImageScan = (barcodeData: string) => {
+    console.log('[BarcodeInput] Received image scan data:', barcodeData);
     setBarcodeText(barcodeData);
     setError(null);
     handleParse(barcodeData);
+  };
+
+  const handleTestData = (testData: string) => {
+    console.log('[BarcodeInput] Received test data:', testData);
+    setBarcodeText(testData);
+    setError(null);
+    handleParse(testData);
   };
 
   const handleParse = async (data?: string) => {
@@ -228,6 +237,9 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+
+        {/* Test Data Component */}
+        <TestBarcodeData onTestDataSelected={handleTestData} />
 
         {/* Debug Test Component */}
         <ZXingTest />

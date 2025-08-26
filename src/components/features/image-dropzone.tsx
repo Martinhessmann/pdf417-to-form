@@ -39,13 +39,13 @@ export function ImageDropzone({ onBarcodeScanned, className }: ImageDropzoneProp
       // Scan for barcode - try primary scanner first
       console.log('[ImageDropzone] Starting barcode scan...');
       let barcodeData: string;
-      
+
       try {
         barcodeData = await barcodeScanner.scanFromFile(file);
         console.log('[ImageDropzone] Primary scanner succeeded:', barcodeData);
       } catch (primaryError) {
         console.warn('[ImageDropzone] Primary scanner failed, trying alternative:', primaryError);
-        
+
         try {
           barcodeData = await altBarcodeScanner.scanFromFile(file);
           console.log('[ImageDropzone] Alternative scanner succeeded:', barcodeData);
@@ -54,7 +54,7 @@ export function ImageDropzone({ onBarcodeScanned, className }: ImageDropzoneProp
           throw altError;
         }
       }
-      
+
       onBarcodeScanned(barcodeData);
       console.log('[ImageDropzone] Barcode data passed to parent component');
     } catch (err) {

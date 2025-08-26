@@ -25,7 +25,11 @@ export class PDF417HealthcareParser {
     const sanitizedData = sanitizeInput(barcodeData);
     const fields = sanitizedData.split(this.fieldSeparator);
 
+    console.log('[PDF417Parser] Parsing barcode data with', fields.length, 'fields');
+    console.log('[PDF417Parser] First 5 fields:', fields.slice(0, 5));
+
     if (fields.length < 3) {
+      console.log('[PDF417Parser] Insufficient fields, returning error');
       return {
         formType: '10',
         isValid: false,
@@ -39,25 +43,45 @@ export class PDF417HealthcareParser {
     const formularcodeergaenzung = fields[1];
     const versionsnummer = fields[2];
 
+    console.log('[PDF417Parser] Form identification:', { formularcode, formularcodeergaenzung, versionsnummer });
+
+    // Normalize form code (e.g., "06" -> "6")
+    const normalizedFormCode = this.normalizeFormCode(formularcode);
+    console.log('[PDF417Parser] Normalized form code:', normalizedFormCode);
+
     const schema = this.getSchemaForForm(formularcode);
     if (!schema) {
+      console.log('[PDF417Parser] No schema found for form code:', formularcode);
       return {
-        formType: formularcode as FormType,
+        formType: normalizedFormCode as FormType,
         isValid: false,
         errors: [`Unsupported form type: ${formularcode}`],
         data: { formularcode, formularcodeergaenzung, versionsnummer }
       };
     }
 
+    console.log('[PDF417Parser] Using schema:', schema.name);
     const result = this.mapFieldsToSchema(fields, schema);
+    console.log('[PDF417Parser] Mapped result keys:', Object.keys(result));
+
     const errors = this.validateParsedData(result);
+    console.log('[PDF417Parser] Validation errors:', errors);
 
     return {
-      formType: formularcode as FormType,
+      formType: normalizedFormCode as FormType,
       isValid: errors.length === 0,
       errors,
       data: result
     };
+  }
+
+  /**
+   * Normalize form code (e.g., "06" -> "6", "10" -> "10")
+   */
+  private normalizeFormCode(formCode: string): string {
+    // Remove leading zeros for single-digit form codes
+    const normalized = formCode.replace(/^0+/, '');
+    return normalized || formCode; // Return original if normalization results in empty string
   }
 
   /**
@@ -128,6 +152,7 @@ export class PDF417HealthcareParser {
    */
   private initializeSchemas(): void {
     this.schemas.set('10', this.getMuster10Schema());
+    this.schemas.set('06', this.getMuster6Schema()); // Handle "06" as Muster 6
     this.schemas.set('6', this.getMuster6Schema());
     this.schemas.set('12', this.getMuster12Schema());
     this.schemas.set('16', this.getMuster16Schema());
