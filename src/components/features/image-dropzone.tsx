@@ -7,6 +7,7 @@ import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Camera, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { barcodeScanner } from '@/lib/barcode-scanner';
+import { altBarcodeScanner } from '@/lib/barcode-scanner-alt';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -35,10 +36,25 @@ export function ImageDropzone({ onBarcodeScanned, className }: ImageDropzoneProp
       setPreviewImage(previewUrl);
       console.log('[ImageDropzone] Preview URL created:', previewUrl);
 
-      // Scan for barcode
+      // Scan for barcode - try primary scanner first
       console.log('[ImageDropzone] Starting barcode scan...');
-      const barcodeData = await barcodeScanner.scanFromFile(file);
-      console.log('[ImageDropzone] Barcode scan completed:', barcodeData);
+      let barcodeData: string;
+      
+      try {
+        barcodeData = await barcodeScanner.scanFromFile(file);
+        console.log('[ImageDropzone] Primary scanner succeeded:', barcodeData);
+      } catch (primaryError) {
+        console.warn('[ImageDropzone] Primary scanner failed, trying alternative:', primaryError);
+        
+        try {
+          barcodeData = await altBarcodeScanner.scanFromFile(file);
+          console.log('[ImageDropzone] Alternative scanner succeeded:', barcodeData);
+        } catch (altError) {
+          console.error('[ImageDropzone] Alternative scanner also failed:', altError);
+          throw altError;
+        }
+      }
+      
       onBarcodeScanned(barcodeData);
       console.log('[ImageDropzone] Barcode data passed to parent component');
     } catch (err) {

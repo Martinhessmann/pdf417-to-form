@@ -17,17 +17,17 @@ export class BarcodeScanner {
    */
   async scanFromFile(file: File): Promise<string> {
     console.log('[BarcodeScanner] Starting scan from file:', file.name, file.type, file.size);
-    
+
     return new Promise((resolve, reject) => {
       const img = new Image();
-      
+
       img.onload = () => {
         try {
           console.log('[BarcodeScanner] Image loaded:', img.width, 'x', img.height);
-          
+
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
-          
+
           if (!ctx) {
             console.error('[BarcodeScanner] Failed to get canvas context');
             reject(new Error('Failed to get canvas context'));
@@ -41,7 +41,7 @@ export class BarcodeScanner {
 
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           console.log('[BarcodeScanner] Image data extracted:', imageData.width, 'x', imageData.height, 'pixels');
-          
+
           // Convert ImageData to format expected by ZXing
           const luminanceSource = new RGBLuminanceSource(
             new Uint8ClampedArray(imageData.data),
@@ -49,12 +49,12 @@ export class BarcodeScanner {
             imageData.height
           );
           console.log('[BarcodeScanner] Luminance source created');
-          
+
           const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
           console.log('[BarcodeScanner] Binary bitmap created');
-          
+
           console.log('[BarcodeScanner] Reader methods available:', Object.getOwnPropertyNames(Object.getPrototypeOf(this.reader)));
-          
+
           // Try to decode
           this.reader.decode(binaryBitmap)
             .then(result => {
@@ -91,7 +91,7 @@ export class BarcodeScanner {
    */
   async scanFromCamera(): Promise<string> {
     console.log('[BarcodeScanner] Starting camera scan...');
-    
+
     if (!navigator.mediaDevices?.getUserMedia) {
       console.error('[BarcodeScanner] Camera not supported');
       throw new Error('Camera access not supported');
@@ -127,14 +127,14 @@ export class BarcodeScanner {
 
       const scanFrame = () => {
         scanAttempts++;
-        
+
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          
+
           try {
             const luminanceSource = new RGBLuminanceSource(
               new Uint8ClampedArray(imageData.data),
@@ -142,7 +142,7 @@ export class BarcodeScanner {
               imageData.height
             );
             const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
-            
+
             this.reader.decode(binaryBitmap)
               .then(result => {
                 console.log('[BarcodeScanner] Camera scan successful after', scanAttempts, 'attempts');
@@ -191,10 +191,10 @@ export class BarcodeScanner {
    */
   async scanFromImageElement(imgElement: HTMLImageElement): Promise<string> {
     console.log('[BarcodeScanner] Scanning from image element:', imgElement.width, 'x', imgElement.height);
-    
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    
+
     if (!ctx) {
       console.error('[BarcodeScanner] Failed to get canvas context');
       throw new Error('Failed to get canvas context');
@@ -206,7 +206,7 @@ export class BarcodeScanner {
 
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     console.log('[BarcodeScanner] Image data extracted from element');
-    
+
     try {
       const luminanceSource = new RGBLuminanceSource(
         new Uint8ClampedArray(imageData.data),
@@ -214,7 +214,7 @@ export class BarcodeScanner {
         imageData.height
       );
       const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
-      
+
       const result = await this.reader.decode(binaryBitmap);
       console.log('[BarcodeScanner] Element scan successful:', result.getText());
       return result.getText();
