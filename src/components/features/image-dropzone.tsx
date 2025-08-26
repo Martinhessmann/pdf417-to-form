@@ -84,7 +84,19 @@ export function ImageDropzone({ onBarcodeScanned, className }: ImageDropzoneProp
       console.error('[ImageDropzone] Camera scan error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Camera scan failed';
       console.error('[ImageDropzone] Camera error message:', errorMessage);
-      setError(errorMessage);
+
+      // Provide specific guidance based on error type
+      if (errorMessage.includes('Camera access denied')) {
+        setError('Camera access denied. Please allow camera permissions in your browser settings and try again.');
+      } else if (errorMessage.includes('No camera found')) {
+        setError('No camera found on this device. Please try uploading an image instead.');
+      } else if (errorMessage.includes('timeout')) {
+        setError('No barcode detected. Please ensure the PDF417 barcode is clearly visible and well-lit, then try again.');
+      } else if (errorMessage.includes('Camera access not supported')) {
+        setError('Camera access not supported on this device or browser. Please try uploading an image instead.');
+      } else {
+        setError(`Camera scan failed: ${errorMessage}`);
+      }
     } finally {
       console.log('[ImageDropzone] Camera scan process finished');
       setIsLoading(false);
@@ -184,8 +196,13 @@ export function ImageDropzone({ onBarcodeScanned, className }: ImageDropzoneProp
             <div className="text-center py-4">
               <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-r-transparent" />
-                {isCameraActive ? 'Scanning with camera...' : 'Processing image...'}
+                {isCameraActive ? 'Camera scanning... Point at PDF417 barcode' : 'Processing image...'}
               </div>
+              {isCameraActive && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Scanning for up to 20 seconds. Ensure barcode is clearly visible and well-lit.
+                </div>
+              )}
             </div>
           )}
 
@@ -226,7 +243,9 @@ export function ImageDropzone({ onBarcodeScanned, className }: ImageDropzoneProp
             <ul className="space-y-1 list-disc list-inside">
               <li>Ensure the PDF417 barcode is clearly visible and well-lit</li>
               <li>Keep the image sharp and avoid blur</li>
-              <li>Try to align the barcode horizontally in the image</li>
+              <li>Try to align the barcode horizontally in the frame</li>
+              <li>For camera: Hold steady and move closer if needed</li>
+              <li>Allow camera permissions when prompted</li>
               <li>Higher resolution images generally work better</li>
             </ul>
           </div>

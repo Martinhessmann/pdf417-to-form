@@ -57,7 +57,7 @@ export class BarcodeScanner {
     });
   }
 
-  /**
+    /**
    * Scan PDF417 barcode from camera stream
    */
   async scanFromCamera(): Promise<string> {
@@ -68,29 +68,111 @@ export class BarcodeScanner {
       throw new Error('Camera access not supported');
     }
 
-    try {
-      console.log('[BarcodeScanner] Requesting camera access...');
+    return new Promise(async (resolve, reject) => {
+      let stream: MediaStream | null = null;
+      let video: HTMLVideoElement | null = null;
+      let scanning = false;
 
-      // Use ZXing's built-in method to decode from video device
-      const result = await this.reader.decodeFromVideoDevice(
-        undefined, // Use default device
-        undefined, // Use default video element
-        (result) => {
-          console.log('[BarcodeScanner] Camera scan successful:', result.getText());
-          return result; // Return result to stop scanning
+      const cleanup = () => {
+        scanning = false;
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
         }
-      );
+      };
 
-      return result.getText();
-    } catch (error) {
-      console.error('[BarcodeScanner] Camera scan failed:', error);
+      try {
+        console.log('[BarcodeScanner] Requesting camera access...');
 
-      if (error instanceof NotFoundException) {
-        throw new Error('No PDF417 barcode found');
-      } else {
-        throw new Error(`Camera scan failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Request camera access with mobile-optimized settings
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment', // Use back camera on mobile
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 }
+          }
+        });
+
+        console.log('[BarcodeScanner] Camera access granted');
+
+        // Create video element
+        video = document.createElement('video');
+        video.srcObject = stream;
+        video.setAttribute('playsinline', 'true'); // Important for iOS
+        video.style.display = 'none';
+        document.body.appendChild(video);
+
+        await new Promise((resolve) => {
+          video!.onloadedmetadata = () => {
+            video!.play();
+            console.log('[BarcodeScanner] Video ready:', video!.videoWidth, 'x', video!.videoHeight);
+            resolve(undefined);
+          };
+        });
+
+        // Start scanning loop
+        scanning = true;
+        let scanCount = 0;
+        const maxScans = 600; // 20 seconds at ~30fps
+
+        const scanFrame = async () => {
+          if (!scanning || !video || video.readyState !== video.HAVE_ENOUGH_DATA) {
+            if (scanning && scanCount < maxScans) {
+              requestAnimationFrame(scanFrame);
+            }
+            return;
+          }
+
+          scanCount++;
+          console.log(`[BarcodeScanner] Scanning frame ${scanCount}/${maxScans}`);
+
+          try {
+            // Use the same method as image scanning for consistency
+            const result = await this.reader.decodeFromImageElement(video);
+
+            if (result && result.getText) {
+              console.log('[BarcodeScanner] Camera scan successful:', result.getText());
+              cleanup();
+              document.body.removeChild(video);
+              resolve(result.getText());
+              return;
+            }
+          } catch (error) {
+            // Continue scanning on decode errors (expected when no barcode found)
+          }
+
+          if (scanCount >= maxScans) {
+            cleanup();
+            document.body.removeChild(video);
+            reject(new Error('Camera scan timeout - no PDF417 barcode detected after 20 seconds'));
+            return;
+          }
+
+          // Continue scanning
+          requestAnimationFrame(scanFrame);
+        };
+
+        // Start the scanning loop
+        scanFrame();
+
+      } catch (error) {
+        cleanup();
+        if (video && document.body.contains(video)) {
+          document.body.removeChild(video);
+        }
+
+        console.error('[BarcodeScanner] Camera setup failed:', error);
+
+        if (error instanceof NotFoundException) {
+          reject(new Error('No PDF417 barcode found'));
+        } else if (error && typeof error === 'object' && 'name' in error && error.name === 'NotAllowedError') {
+          reject(new Error('Camera access denied. Please allow camera permissions and try again.'));
+        } else if (error && typeof error === 'object' && 'name' in error && error.name === 'NotFoundError') {
+          reject(new Error('No camera found on this device'));
+        } else {
+          reject(new Error(`Camera scan failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        }
       }
-    }
+    });
   }
 
   /**

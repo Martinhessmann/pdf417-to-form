@@ -1,23 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Light theme - Healthcare friendly palette */
+  --background: #fafbff;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-foreground: #171717;
-  --primary: #171717;
+  --card-foreground: #0f172a;
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #171717;
-  --muted: #f5f5f5;
-  --muted-foreground: #737373;
-  --accent: #f5f5f5;
-  --accent-foreground: #171717;
-  --destructive: #ef4444;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #475569;
+  --muted: #f8fafc;
+  --muted-foreground: #64748b;
+  --accent: #e0f2fe;
+  --accent-foreground: #0c4a6e;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: #171717;
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --warning: #d97706;
+  --warning-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #f1f5f9;
+  --ring: #2563eb;
+  --radius: 0.5rem;
 }
 
 @theme inline {
@@ -35,37 +41,128 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --radius: var(--radius);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --card: #0a0a0a;
-    --card-foreground: #ededed;
-    --primary: #ededed;
-    --primary-foreground: #0a0a0a;
-    --secondary: #262626;
-    --secondary-foreground: #ededed;
-    --muted: #262626;
-    --muted-foreground: #a3a3a3;
-    --accent: #262626;
-    --accent-foreground: #ededed;
-    --destructive: #dc2626;
-    --destructive-foreground: #ededed;
-    --border: #262626;
-    --input: #262626;
-    --ring: #d4d4d8;
+    /* Dark theme - Professional and accessible */
+    --background: #020617;
+    --foreground: #f8fafc;
+    --card: #0f172a;
+    --card-foreground: #f8fafc;
+    --primary: #3b82f6;
+    --primary-foreground: #f8fafc;
+    --secondary: #1e293b;
+    --secondary-foreground: #cbd5e1;
+    --muted: #0f172a;
+    --muted-foreground: #94a3b8;
+    --accent: #1e3a8a;
+    --accent-foreground: #e0f2fe;
+    --destructive: #ef4444;
+    --destructive-foreground: #f8fafc;
+    --success: #22c55e;
+    --success-foreground: #f8fafc;
+    --warning: #eab308;
+    --warning-foreground: #0f172a;
+    --border: #334155;
+    --input: #1e293b;
+    --ring: #3b82f6;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+}
+
+/* Custom animations and utilities */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px hsl(var(--primary) / 0.3); }
+  50% { box-shadow: 0 0 20px hsl(var(--primary) / 0.6), 0 0 30px hsl(var(--primary) / 0.4); }
+}
+
+/* Animation utilities */
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Custom focus styles */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+}
+
+/* Improved form inputs */
+.input-enhanced {
+  @apply w-full px-3 py-2 text-sm bg-background border border-input rounded-md transition-all duration-200 placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0;
+}
+
+.input-enhanced:hover {
+  @apply border-border/60;
+}
+
+/* Card enhancements */
+.card-enhanced {
+  @apply bg-card text-card-foreground border border-border/50 rounded-lg shadow-sm transition-all duration-200;
+}
+
+.card-enhanced:hover {
+  @apply shadow-md border-border/80;
+}
+
+/* Status indicators */
+.status-valid {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 bg-success/10 text-success border border-success/20 rounded-full text-xs font-medium;
+}
+
+.status-invalid {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 bg-destructive/10 text-destructive border border-destructive/20 rounded-full text-xs font-medium;
+}
+
+.status-warning {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 bg-warning/10 text-warning border border-warning/20 rounded-full text-xs font-medium;
+}
+
+/* Loading states */
+.loading-shimmer {
+  background: linear-gradient(90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted) / 0.8) 50%,
+    hsl(var(--muted)) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
