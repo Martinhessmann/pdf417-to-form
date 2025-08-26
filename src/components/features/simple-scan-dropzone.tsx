@@ -20,6 +20,7 @@ export function SimpleScanDropzone({ onScanSuccess, className }: SimpleScanDropz
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isCameraSupported, setIsCameraSupported] = useState(false);
 
   const handleImageScan = async (file: File) => {
     setIsLoading(true);
@@ -73,12 +74,18 @@ export function SimpleScanDropzone({ onScanSuccess, className }: SimpleScanDropz
     disabled: isLoading
   });
 
-  // Detect mobile after component mounts to avoid hydration mismatch
+  // Detect mobile and camera support after component mounts to avoid hydration mismatch
   useEffect(() => {
     const checkIsMobile = () => {
       return typeof window !== 'undefined' && /Mobi|Android/i.test(navigator.userAgent);
     };
+
+    const checkCameraSupport = () => {
+      return barcodeScanner.isCameraSupported();
+    };
+
     setIsMobile(checkIsMobile());
+    setIsCameraSupported(checkCameraSupport());
   }, []);
 
   return (
@@ -200,8 +207,8 @@ export function SimpleScanDropzone({ onScanSuccess, className }: SimpleScanDropz
         )}
       </div>
 
-      {/* Mobile Camera Button */}
-      {isMobile && (
+      {/* Mobile Camera Button - Only show if mobile and camera is supported */}
+      {isMobile && isCameraSupported && (
         <div className="flex justify-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <Button
             onClick={handleCameraScan}
@@ -219,6 +226,21 @@ export function SimpleScanDropzone({ onScanSuccess, className }: SimpleScanDropz
               'Use Camera'
             )}
           </Button>
+        </div>
+      )}
+
+      {/* Camera Not Available Message */}
+      {isMobile && !isCameraSupported && (
+        <div className="flex justify-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <div className="bg-muted/50 border border-border/30 rounded-lg p-4 text-center max-w-md">
+            <div className="flex items-center justify-center mb-2 text-muted-foreground">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              <span className="font-medium">Camera Unavailable</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Camera access requires HTTPS or localhost. Please upload an image instead.
+            </p>
+          </div>
         </div>
       )}
 

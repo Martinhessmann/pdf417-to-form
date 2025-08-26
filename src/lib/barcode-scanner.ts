@@ -1,7 +1,7 @@
 // Purpose: Barcode scanner utility for extracting PDF417 codes from images
 // Uses ZXing library to decode barcodes from image files and camera streams
 
-import { BrowserPDF417Reader, NotFoundException, RGBLuminanceSource, HybridBinarizer, BinaryBitmap } from '@zxing/library';
+import { BrowserPDF417Reader, NotFoundException } from '@zxing/library';
 
 export class BarcodeScanner {
   private reader: BrowserPDF417Reader;
@@ -24,6 +24,11 @@ export class BarcodeScanner {
       img.onload = async () => {
         try {
           console.log('[BarcodeScanner] Image loaded:', img.width, 'x', img.height);
+
+          // Ensure image has valid dimensions
+          if (img.width === 0 || img.height === 0) {
+            throw new Error('Image has invalid dimensions');
+          }
 
           // Try multiple scanning approaches for better reliability
           let result = null;
@@ -142,6 +147,11 @@ export class BarcodeScanner {
       throw new Error('Failed to get canvas context');
     }
 
+    // Validate image dimensions
+    if (img.width === 0 || img.height === 0) {
+      throw new Error('Invalid image dimensions for canvas scanning');
+    }
+
     // Set canvas size to image size
     canvas.width = img.width;
     canvas.height = img.height;
@@ -149,17 +159,24 @@ export class BarcodeScanner {
     // Draw image to canvas
     ctx.drawImage(img, 0, 0);
 
-    // Get image data and process it manually
+        // Get image data and process it manually
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
     // Try scanning without enhancement first
     try {
+      console.log('[BarcodeScanner] Trying canvas scan without enhancement');
       const result = await this.scanImageData(imageData);
       return result;
     } catch (error) {
       // If that fails, try with contrast enhancement
+      console.log('[BarcodeScanner] Trying canvas scan with contrast enhancement');
       this.enhanceImageContrast(imageData);
-      const result = await this.scanImageData(imageData);
+
+      // Put the enhanced data back on canvas for processing
+      ctx.putImageData(imageData, 0, 0);
+      const enhancedImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      const result = await this.scanImageData(enhancedImageData);
       return result;
     }
   }
@@ -173,6 +190,11 @@ export class BarcodeScanner {
 
     if (!ctx) {
       throw new Error('Failed to get canvas context');
+    }
+
+    // Validate image dimensions
+    if (img.width === 0 || img.height === 0) {
+      throw new Error('Invalid image dimensions for scaled scanning');
     }
 
     // Scale up the image for better barcode recognition
@@ -192,45 +214,53 @@ export class BarcodeScanner {
     return result;
   }
 
-  /**
-   * Scan ImageData using ZXing's lower-level APIs
+    /**
+   * Scan ImageData by converting canvas to image element that ZXing can process
    */
   private async scanImageData(imageData: ImageData): Promise<string> {
     console.log(`[BarcodeScanner] Processing ImageData: ${imageData.width}x${imageData.height}, data length: ${imageData.data.length}`);
 
-    // Convert RGBA to RGB data (ZXing expects RGB, not RGBA)
-    const rgbData = new Uint8ClampedArray((imageData.width * imageData.height) * 3);
-    for (let i = 0, j = 0; i < imageData.data.length; i += 4, j += 3) {
-      rgbData[j] = imageData.data[i];     // R
-      rgbData[j + 1] = imageData.data[i + 1]; // G
-      rgbData[j + 2] = imageData.data[i + 2]; // B
-      // Skip alpha channel (i + 3)
-    }
+    return new Promise((resolve, reject) => {
+      // Create a new canvas and put the ImageData on it
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
 
-    console.log(`[BarcodeScanner] Converted to RGB data, length: ${rgbData.length}`);
+      if (!tempCtx) {
+        reject(new Error('Failed to get temp canvas context'));
+        return;
+      }
 
-    try {
-      // Create luminance source from RGB data
-      const luminanceSource = new RGBLuminanceSource(
-        rgbData,
-        imageData.width,
-        imageData.height
-      );
+      tempCanvas.width = imageData.width;
+      tempCanvas.height = imageData.height;
+      tempCtx.putImageData(imageData, 0, 0);
 
-      console.log('[BarcodeScanner] Luminance source created');
+      // Convert canvas to data URL
+      const dataURL = tempCanvas.toDataURL('image/png');
+      console.log(`[BarcodeScanner] Created data URL, length: ${dataURL.length}`);
 
-      // Create binary bitmap
-      const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
-      console.log('[BarcodeScanner] Binary bitmap created');
+      // Create image element from data URL
+      const img = new Image();
 
-      // Decode the barcode
-      const result = await this.reader.decode(binaryBitmap);
-      console.log('[BarcodeScanner] Decode successful via ImageData');
-      return result.getText();
-    } catch (error) {
-      console.error('[BarcodeScanner] ImageData decode error:', error);
-      throw error;
-    }
+      img.onload = async () => {
+        try {
+          console.log(`[BarcodeScanner] Image element loaded: ${img.width}x${img.height}`);
+
+          // Use ZXing's built-in method to scan the image element
+          const result = await this.reader.decodeFromImageElement(img);
+          console.log('[BarcodeScanner] Decode successful via converted image');
+          resolve(result.getText());
+        } catch (error) {
+          console.error('[BarcodeScanner] Image element decode error:', error);
+          reject(error);
+        }
+      };
+
+      img.onerror = () => {
+        reject(new Error('Failed to load image from data URL'));
+      };
+
+      img.src = dataURL;
+    });
   }
 
     /**
@@ -242,6 +272,11 @@ export class BarcodeScanner {
 
     if (!ctx) {
       throw new Error('Failed to get canvas context');
+    }
+
+    // Validate image dimensions
+    if (img.width === 0 || img.height === 0) {
+      throw new Error('Invalid image dimensions for cropped scanning');
     }
 
         // Define crop regions to try (as percentages of image dimensions)
@@ -276,6 +311,12 @@ export class BarcodeScanner {
         const cropHeight = Math.floor(img.height * region.height);
 
         console.log(`[BarcodeScanner] Crop dimensions: ${cropWidth}x${cropHeight} at (${cropX}, ${cropY})`);
+
+        // Validate crop dimensions
+        if (cropWidth <= 0 || cropHeight <= 0) {
+          console.log(`[BarcodeScanner] ❌ Invalid crop dimensions for region: ${region.name}`);
+          continue;
+        }
 
         // Set canvas to crop size
         canvas.width = cropWidth;
@@ -313,6 +354,11 @@ export class BarcodeScanner {
       throw new Error('Failed to get canvas context');
     }
 
+    // Validate image dimensions
+    if (img.width === 0 || img.height === 0) {
+      throw new Error('Invalid image dimensions for multi-resolution scanning');
+    }
+
     // Define different resolution scales to try
     const resolutionScales = [
       { scale: 0.5, name: '50%' },    // Half resolution - often optimal for barcode recognition
@@ -329,6 +375,12 @@ export class BarcodeScanner {
         // Calculate scaled dimensions
         const scaledWidth = Math.floor(img.width * scale);
         const scaledHeight = Math.floor(img.height * scale);
+
+        // Validate scaled dimensions
+        if (scaledWidth <= 0 || scaledHeight <= 0) {
+          console.log(`[BarcodeScanner] ❌ Invalid scaled dimensions for resolution: ${name}`);
+          continue;
+        }
 
         // Set canvas to scaled size
         canvas.width = scaledWidth;
@@ -374,14 +426,49 @@ export class BarcodeScanner {
   }
 
     /**
+   * Check if camera access is available
+   */
+  isCameraSupported(): boolean {
+    // Check for secure context (HTTPS required for camera)
+    const isSecureContext = typeof window !== 'undefined' &&
+      (window.location.protocol === 'https:' || window.location.hostname === 'localhost');
+
+    // Check for MediaDevices API support
+    const hasMediaDevices = typeof navigator !== 'undefined' &&
+      navigator.mediaDevices &&
+      typeof navigator.mediaDevices.getUserMedia === 'function';
+
+    console.log('[BarcodeScanner] Camera support check:', {
+      isSecureContext,
+      hasMediaDevices,
+      protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown',
+      hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown'
+    });
+
+    return isSecureContext && hasMediaDevices;
+  }
+
+  /**
    * Scan PDF417 barcode from camera stream
    */
   async scanFromCamera(): Promise<string> {
     console.log('[BarcodeScanner] Starting camera scan...');
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      console.error('[BarcodeScanner] Camera not supported');
-      throw new Error('Camera access not supported');
+    // Enhanced camera support detection
+    if (!this.isCameraSupported()) {
+      const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+
+      if (!isHttps && !isLocalhost) {
+        console.error('[BarcodeScanner] Camera requires HTTPS');
+        throw new Error('Camera access requires HTTPS. Please use HTTPS or localhost.');
+      } else if (!navigator.mediaDevices?.getUserMedia) {
+        console.error('[BarcodeScanner] MediaDevices API not supported');
+        throw new Error('Camera access not supported by this browser. Please use a modern browser with camera support.');
+      } else {
+        console.error('[BarcodeScanner] Camera not supported for unknown reason');
+        throw new Error('Camera access not available.');
+      }
     }
 
     return new Promise(async (resolve, reject) => {
