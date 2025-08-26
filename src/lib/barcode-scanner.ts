@@ -23,12 +23,11 @@ export class BarcodeScanner {
 
       img.onload = async () => {
         try {
-          console.log('[BarcodeScanner] Image loaded:', img.width, 'x', img.height);
+                    console.log('[BarcodeScanner] Image loaded - display:', img.width, 'x', img.height, 'natural:', img.naturalWidth, 'x', img.naturalHeight);
 
-          // Ensure image has valid dimensions
-          if (img.width === 0 || img.height === 0) {
-            throw new Error('Image has invalid dimensions');
-          }
+          // Resize large images for better barcode detection (like messaging apps do)
+          const resizedImg = await this.resizeImageIfNeeded(img);
+          console.log('[BarcodeScanner] Using image dimensions:', resizedImg.width, 'x', resizedImg.height);
 
           // Try multiple scanning approaches for better reliability
           let result = null;
@@ -37,7 +36,7 @@ export class BarcodeScanner {
           // Method 1: Direct image element scanning
           try {
             console.log('[BarcodeScanner] Attempting direct image scanning...');
-            result = await this.reader.decodeFromImageElement(img);
+            result = await this.reader.decodeFromImageElement(resizedImg);
             if (result) {
               console.log('[BarcodeScanner] Direct scan successful:', result.getText());
               URL.revokeObjectURL(img.src);
@@ -52,7 +51,7 @@ export class BarcodeScanner {
           // Method 2: Canvas-based scanning with preprocessing
           try {
             console.log('[BarcodeScanner] Attempting canvas-based scanning...');
-            result = await this.scanFromCanvas(img);
+            result = await this.scanFromCanvas(resizedImg);
             if (result) {
               console.log('[BarcodeScanner] Canvas scan successful:', result);
               URL.revokeObjectURL(img.src);
@@ -61,51 +60,6 @@ export class BarcodeScanner {
             }
           } catch (error) {
             console.log('[BarcodeScanner] Canvas scan failed:', error);
-            lastError = error;
-          }
-
-          // Method 3: Try with different image scaling
-          try {
-            console.log('[BarcodeScanner] Attempting scaled image scanning...');
-            result = await this.scanFromScaledCanvas(img);
-            if (result) {
-              console.log('[BarcodeScanner] Scaled scan successful:', result);
-              URL.revokeObjectURL(img.src);
-              resolve(result);
-              return;
-            }
-          } catch (error) {
-            console.log('[BarcodeScanner] Scaled scan failed:', error);
-            lastError = error;
-          }
-
-          // Method 4: Try with different resolutions (for large images)
-          try {
-            console.log('[BarcodeScanner] Attempting multi-resolution scanning...');
-            result = await this.scanMultiResolution(img);
-            if (result) {
-              console.log('[BarcodeScanner] Multi-resolution scan successful:', result);
-              URL.revokeObjectURL(img.src);
-              resolve(result);
-              return;
-            }
-          } catch (error) {
-            console.log('[BarcodeScanner] Multi-resolution scan failed:', error);
-            lastError = error;
-          }
-
-          // Method 5: Try with cropped regions (for large images)
-          try {
-            console.log('[BarcodeScanner] Attempting cropped region scanning...');
-            result = await this.scanCroppedRegions(img);
-            if (result) {
-              console.log('[BarcodeScanner] Cropped scan successful:', result);
-              URL.revokeObjectURL(img.src);
-              resolve(result);
-              return;
-            }
-          } catch (error) {
-            console.log('[BarcodeScanner] Cropped scan failed:', error);
             lastError = error;
           }
 
@@ -140,6 +94,8 @@ export class BarcodeScanner {
    * Scan using canvas with image preprocessing
    */
   private async scanFromCanvas(img: HTMLImageElement): Promise<string> {
+    console.log('[BarcodeScanner] scanFromCanvas - img dimensions:', img.width, 'x', img.height, 'naturalWidth:', img.naturalWidth, 'naturalHeight:', img.naturalHeight);
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -147,17 +103,17 @@ export class BarcodeScanner {
       throw new Error('Failed to get canvas context');
     }
 
-    // Validate image dimensions
-    if (img.width === 0 || img.height === 0) {
-      throw new Error('Invalid image dimensions for canvas scanning');
+    // Basic validation - canvas methods should work with loaded images
+    if (!img.complete && img.naturalWidth === 0) {
+      throw new Error('Image not properly loaded for canvas scanning');
     }
 
-    // Set canvas size to image size
-    canvas.width = img.width;
-    canvas.height = img.height;
+    // Set canvas size to image's natural size (actual pixel dimensions)
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
 
     // Draw image to canvas
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
         // Get image data and process it manually
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -192,15 +148,17 @@ export class BarcodeScanner {
       throw new Error('Failed to get canvas context');
     }
 
-    // Validate image dimensions
-    if (img.width === 0 || img.height === 0) {
-      throw new Error('Invalid image dimensions for scaled scanning');
+    // Basic validation - ensure image is loaded
+    if (!img.complete && img.naturalWidth === 0) {
+      throw new Error('Image not properly loaded for scaled scanning');
     }
 
     // Scale up the image for better barcode recognition
     const scale = 2.0;
-    canvas.width = img.width * scale;
-    canvas.height = img.height * scale;
+    const naturalWidth = img.naturalWidth || img.width;
+    const naturalHeight = img.naturalHeight || img.height;
+    canvas.width = naturalWidth * scale;
+    canvas.height = naturalHeight * scale;
 
     // Use high quality scaling - disable smoothing for sharp edges
     ctx.imageSmoothingEnabled = false;
@@ -274,9 +232,9 @@ export class BarcodeScanner {
       throw new Error('Failed to get canvas context');
     }
 
-    // Validate image dimensions
-    if (img.width === 0 || img.height === 0) {
-      throw new Error('Invalid image dimensions for cropped scanning');
+    // Basic validation - ensure image is loaded
+    if (!img.complete && img.naturalWidth === 0) {
+      throw new Error('Image not properly loaded for cropped scanning');
     }
 
         // Define crop regions to try (as percentages of image dimensions)
@@ -304,17 +262,19 @@ export class BarcodeScanner {
       try {
         console.log(`[BarcodeScanner] Trying crop region: ${region.name} (${Math.floor(region.x*100)}%, ${Math.floor(region.y*100)}%, ${Math.floor(region.width*100)}% x ${Math.floor(region.height*100)}%)`);
 
-        // Calculate crop dimensions
-        const cropX = Math.floor(img.width * region.x);
-        const cropY = Math.floor(img.height * region.y);
-        const cropWidth = Math.floor(img.width * region.width);
-        const cropHeight = Math.floor(img.height * region.height);
+        // Calculate crop dimensions using natural image dimensions
+        const naturalWidth = img.naturalWidth || img.width;
+        const naturalHeight = img.naturalHeight || img.height;
+        const cropX = Math.floor(naturalWidth * region.x);
+        const cropY = Math.floor(naturalHeight * region.y);
+        const cropWidth = Math.floor(naturalWidth * region.width);
+        const cropHeight = Math.floor(naturalHeight * region.height);
 
         console.log(`[BarcodeScanner] Crop dimensions: ${cropWidth}x${cropHeight} at (${cropX}, ${cropY})`);
 
-        // Validate crop dimensions
-        if (cropWidth <= 0 || cropHeight <= 0) {
-          console.log(`[BarcodeScanner] ❌ Invalid crop dimensions for region: ${region.name}`);
+        // Skip tiny crop regions that won't contain readable barcodes
+        if (cropWidth < 50 || cropHeight < 50) {
+          console.log(`[BarcodeScanner] ❌ Crop region too small for region: ${region.name}`);
           continue;
         }
 
@@ -347,6 +307,8 @@ export class BarcodeScanner {
    * Try scanning at different resolutions (for very large images)
    */
   private async scanMultiResolution(img: HTMLImageElement): Promise<string> {
+    console.log('[BarcodeScanner] scanMultiResolution - img dimensions:', img.width, 'x', img.height, 'naturalWidth:', img.naturalWidth, 'naturalHeight:', img.naturalHeight);
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -354,9 +316,9 @@ export class BarcodeScanner {
       throw new Error('Failed to get canvas context');
     }
 
-    // Validate image dimensions
-    if (img.width === 0 || img.height === 0) {
-      throw new Error('Invalid image dimensions for multi-resolution scanning');
+    // Basic validation - ensure image is loaded
+    if (!img.complete && img.naturalWidth === 0) {
+      throw new Error('Image not properly loaded for multi-resolution scanning');
     }
 
     // Define different resolution scales to try
@@ -370,15 +332,17 @@ export class BarcodeScanner {
     for (const scaleConfig of resolutionScales) {
       try {
         const { scale, name } = scaleConfig;
-        console.log(`[BarcodeScanner] Trying resolution: ${name} (${Math.floor(img.width * scale)}x${Math.floor(img.height * scale)})`);
+        const naturalWidth = img.naturalWidth || img.width;
+        const naturalHeight = img.naturalHeight || img.height;
+        console.log(`[BarcodeScanner] Trying resolution: ${name} (${Math.floor(naturalWidth * scale)}x${Math.floor(naturalHeight * scale)})`);
 
-        // Calculate scaled dimensions
-        const scaledWidth = Math.floor(img.width * scale);
-        const scaledHeight = Math.floor(img.height * scale);
+        // Calculate scaled dimensions using natural image dimensions
+        const scaledWidth = Math.floor(naturalWidth * scale);
+        const scaledHeight = Math.floor(naturalHeight * scale);
 
-        // Validate scaled dimensions
-        if (scaledWidth <= 0 || scaledHeight <= 0) {
-          console.log(`[BarcodeScanner] ❌ Invalid scaled dimensions for resolution: ${name}`);
+        // Skip tiny scaled images that won't be useful
+        if (scaledWidth < 50 || scaledHeight < 50) {
+          console.log(`[BarcodeScanner] ❌ Scaled dimensions too small for resolution: ${name}`);
           continue;
         }
 
@@ -596,6 +560,72 @@ export class BarcodeScanner {
       }
       throw new Error(`Scan failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Resize large images to optimal size for barcode scanning (like messaging apps do)
+   */
+  private async resizeImageIfNeeded(img: HTMLImageElement): Promise<HTMLImageElement> {
+    const MAX_WIDTH = 1200;
+    const MAX_HEIGHT = 1600;
+
+    const width = img.naturalWidth || img.width;
+    const height = img.naturalHeight || img.height;
+
+    // If image is already small enough, return as-is
+    if (width <= MAX_WIDTH && height <= MAX_HEIGHT) {
+      console.log('[BarcodeScanner] Image size OK, no resizing needed');
+      return img;
+    }
+
+    console.log(`[BarcodeScanner] Large image detected (${width}x${height}), resizing for better barcode detection...`);
+
+    // Calculate new dimensions maintaining aspect ratio
+    let newWidth = width;
+    let newHeight = height;
+
+    if (width > MAX_WIDTH) {
+      newWidth = MAX_WIDTH;
+      newHeight = (height * MAX_WIDTH) / width;
+    }
+
+    if (newHeight > MAX_HEIGHT) {
+      newWidth = (newWidth * MAX_HEIGHT) / newHeight;
+      newHeight = MAX_HEIGHT;
+    }
+
+    console.log(`[BarcodeScanner] Resizing to: ${Math.round(newWidth)}x${Math.round(newHeight)}`);
+
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+
+      canvas.width = Math.round(newWidth);
+      canvas.height = Math.round(newHeight);
+
+      // Use high-quality scaling
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      // Draw resized image
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // Convert back to image element
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          console.warn('[BarcodeScanner] Resize failed, using original image');
+          resolve(img);
+          return;
+        }
+
+        const resizedImg = new Image();
+        resizedImg.onload = () => {
+          console.log(`[BarcodeScanner] ✅ Resized successfully: ${resizedImg.width}x${resizedImg.height}`);
+          resolve(resizedImg);
+        };
+        resizedImg.src = URL.createObjectURL(blob);
+      }, 'image/jpeg', 0.85); // Good quality JPEG
+    });
   }
 }
 
