@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BrowserPDF417Reader, NotFoundException, BinaryBitmap, HybridBinarizer, RGBLuminanceSource } from '@zxing/library';
 
 export function ZXingTest() {
   const [testResult, setTestResult] = useState<string>('');
@@ -15,7 +16,6 @@ export function ZXingTest() {
 
     try {
       // Test basic imports
-      const { BrowserPDF417Reader, NotFoundException, BinaryBitmap, HybridBinarizer, RGBLuminanceSource } = require('@zxing/library');
       console.log('[ZXingTest] BrowserPDF417Reader:', BrowserPDF417Reader);
       console.log('[ZXingTest] NotFoundException:', NotFoundException);
       console.log('[ZXingTest] BinaryBitmap:', BinaryBitmap);
@@ -63,7 +63,7 @@ export function ZXingTest() {
       console.log('[ZXingTest] ImageData created:', imageData);
 
       // Test ZXing components
-      const { RGBLuminanceSource, HybridBinarizer, BinaryBitmap } = require('@zxing/library');
+      // Use imported RGBLuminanceSource, HybridBinarizer, BinaryBitmap
 
       const luminanceSource = new RGBLuminanceSource(
         new Uint8ClampedArray(imageData.data),

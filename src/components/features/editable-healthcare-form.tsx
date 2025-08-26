@@ -14,7 +14,7 @@ import { ArrowLeft, Save, AlertCircle, CheckCircle } from 'lucide-react';
 interface EditableHealthcareFormProps {
   parsedData: ParsedBarcodeData;
   onBack: () => void;
-  onSave?: (data: any) => void;
+  onSave?: (data: Record<string, unknown>) => void;
 }
 
 interface FormField {

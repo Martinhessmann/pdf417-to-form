@@ -4,7 +4,6 @@
 import {
   ParsedBarcodeData,
   FormSchema,
-  BarcodeFieldDefinition,
   FormType
 } from '@/types/healthcare';
 import { parseGermanDate, validateDate, sanitizeInput } from './utils';
@@ -34,7 +33,7 @@ export class PDF417HealthcareParser {
         formType: '10',
         isValid: false,
         errors: ['Invalid barcode format: insufficient fields'],
-        data: {} as any
+        data: {}
       };
     }
 
@@ -93,21 +92,29 @@ export class PDF417HealthcareParser {
     return this.schemas.get(normalizedCode);
   }
 
-  /**
+    /**
    * Map barcode fields to structured data according to schema
    */
-  private mapFieldsToSchema(fields: string[], schema: FormSchema): Record<string, any> {
-    const result: Record<string, any> = {};
+  private mapFieldsToSchema(fields: string[], schema: FormSchema): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
 
     schema.fields.forEach(fieldDef => {
+      // Skip reserved fields from mapping
+      if (fieldDef.name.startsWith('reserved')) {
+        return;
+      }
+
       let value = fields[fieldDef.index] || '';
+      console.log(`[PDF417Parser] Mapping field "${fieldDef.name}" (index ${fieldDef.index}): "${value}"`);
 
       if (value) {
         // Apply transformations
         if (fieldDef.transform) {
           value = fieldDef.transform(value);
         } else if (fieldDef.type === 'date') {
-          value = parseGermanDate(value);
+          const dateValue = parseGermanDate(value);
+          console.log(`[PDF417Parser] Date transformation "${value}" -> "${dateValue}"`);
+          value = dateValue;
         }
 
         if (value !== null && value !== '') {
@@ -116,36 +123,51 @@ export class PDF417HealthcareParser {
       }
     });
 
+    console.log('[PDF417Parser] Final mapped result:', result);
     return result;
   }
 
   /**
    * Validate parsed data against schema rules
    */
-  private validateParsedData(data: Record<string, any>): string[] {
+  private validateParsedData(data: Record<string, unknown>): string[] {
     const errors: string[] = [];
+
+    console.log('[PDF417Parser] Validating data:', data);
 
     // Validate required fields
     if (!data.formularcode || !data.versionsnummer) {
       errors.push('Missing required form identification fields');
     }
 
-    // Validate date fields
+    // Validate date fields - only check actual date values
     Object.entries(data).forEach(([key, value]) => {
-      if (key.includes('datum') && value && !validateDate(value.replace(/-/g, ''))) {
-        errors.push(`Invalid date format for ${key}: ${value}`);
+      if (key.includes('datum') && value) {
+        console.log(`[PDF417Parser] Validating date field ${key}: "${value}"`);
+        // Check if it's already in YYYY-MM-DD format or YYYYMMDD format
+        const datePattern = /^\d{4}-\d{2}-\d{2}$|^\d{8}$/;
+        if (!datePattern.test(value)) {
+          errors.push(`Invalid date format for ${key}: ${value}`);
+        }
       }
     });
 
-    // Validate specific field constraints
-    if (data.versichertenart && !['1', '3', '5'].includes(data.versichertenart)) {
-      errors.push(`Invalid insurance type: ${data.versichertenart}`);
+    // Validate specific field constraints with explicit checks
+    if (data.versichertenart) {
+      console.log(`[PDF417Parser] Validating versichertenart: "${data.versichertenart}"`);
+      if (!['1', '3', '5'].includes(data.versichertenart)) {
+        errors.push(`Invalid insurance type: ${data.versichertenart}`);
+      }
     }
 
-    if (data.geschlecht && !['M', 'W', 'X', 'D'].includes(data.geschlecht)) {
-      errors.push(`Invalid gender value: ${data.geschlecht}`);
+    if (data.geschlecht) {
+      console.log(`[PDF417Parser] Validating geschlecht: "${data.geschlecht}"`);
+      if (!['M', 'W', 'X', 'D'].includes(data.geschlecht)) {
+        errors.push(`Invalid gender value: ${data.geschlecht}`);
+      }
     }
 
+    console.log('[PDF417Parser] Validation complete, errors:', errors);
     return errors;
   }
 
@@ -203,6 +225,7 @@ export class PDF417HealthcareParser {
 
   /**
    * Muster 6 - Referral Form
+   * Based on actual barcode data structure with empty fields
    */
   private getMuster6Schema(): FormSchema {
     return {
@@ -210,25 +233,47 @@ export class PDF417HealthcareParser {
       name: 'Muster 6 - Überweisung',
       fields: [
         { name: 'formularcode', index: 0, required: true },
-        { name: 'formularcodeergaenzung', index: 1, required: true },
+        { name: 'formularcodeergaenzung', index: 1 }, // often empty
         { name: 'versionsnummer', index: 2, required: true },
-        { name: 'nachname', index: 3, maxLength: 45 },
-        { name: 'vorname', index: 4, maxLength: 45 },
-        { name: 'geburtsdatum', index: 5, type: 'date' },
-        { name: 'versicherungsschutzEnde', index: 6, type: 'date' },
-        { name: 'kostentraegerkennung', index: 7, maxLength: 9 },
-        { name: 'kostentraegername', index: 8 },
-        { name: 'wopKennzeichen', index: 9 },
-        { name: 'versichertenId', index: 10, maxLength: 12 },
-        { name: 'versichertenart', index: 11, allowedValues: ['1', '3', '5'] },
-        { name: 'besonderePersonengruppe', index: 12, allowedValues: ['00', '04', '06', '07', '08', '09'] },
-        { name: 'dmpKennzeichnung', index: 13, maxLength: 2 },
-        { name: 'bsnrErstveranlasser', index: 14, maxLength: 9 },
-        { name: 'lanrErstveranlasser', index: 15, maxLength: 9 },
-        { name: 'ausstellungsdatum', index: 16, type: 'date' },
-        { name: 'ueberweisungsgrund', index: 17 },
-        { name: 'befundkopie', index: 18 },
-        { name: 'kurativePraeventivKur', index: 19 }
+        { name: 'reserved1', index: 3 }, // often empty
+        { name: 'nachname', index: 4, maxLength: 45 },
+        { name: 'vorname', index: 5, maxLength: 45 },
+        { name: 'geburtsdatum', index: 6, type: 'date' },
+        { name: 'reserved2', index: 7 }, // often empty
+        { name: 'kostentraegerkennung', index: 8, maxLength: 9 },
+        { name: 'kostentraegername', index: 9 },
+        { name: 'wopKennzeichen', index: 10 },
+        { name: 'versichertenId', index: 11, maxLength: 12 },
+        { name: 'versichertenart', index: 12, allowedValues: ['1', '3', '5'] },
+        { name: 'besonderePersonengruppe', index: 13, allowedValues: ['00', '04', '06', '07', '08', '09'] },
+        { name: 'dmpKennzeichnung', index: 14, maxLength: 2 },
+        { name: 'bsnrErstveranlasser', index: 15, maxLength: 9 },
+        { name: 'lanrErstveranlasser', index: 16, maxLength: 9 },
+        { name: 'ausstellungsdatum', index: 17, type: 'date' },
+        { name: 'geschlecht', index: 18, allowedValues: ['M', 'W', 'X', 'D'] },
+        { name: 'titel', index: 19, maxLength: 20 },
+        { name: 'reserved3', index: 20 }, // often empty
+        { name: 'reserved4', index: 21 }, // often empty
+        { name: 'plz', index: 22, maxLength: 10 },
+        { name: 'ort', index: 23, maxLength: 40 },
+        { name: 'strasse', index: 24, maxLength: 46 },
+        { name: 'hausnummer', index: 25, maxLength: 9 },
+        { name: 'reserved5', index: 26 }, // often empty
+        // Additional fields may follow based on specific form requirements
+        { name: 'fachbereich', index: 27 }, // Medical department
+        { name: 'reserved6', index: 28 },
+        { name: 'reserved7', index: 29 },
+        { name: 'reserved8', index: 30 },
+        { name: 'reserved9', index: 31 },
+        { name: 'reserved10', index: 32 },
+        { name: 'reserved11', index: 33 },
+        { name: 'reserved12', index: 34 },
+        { name: 'fachrichtung', index: 35 }, // Medical specialty
+        { name: 'reserved13', index: 36 },
+        { name: 'reserved14', index: 37 },
+        { name: 'reserved15', index: 38 },
+        { name: 'diagnose', index: 39 }, // Diagnosis
+        { name: 'ueberweisungsgrund', index: 40 } // Referral reason
       ]
     };
   }

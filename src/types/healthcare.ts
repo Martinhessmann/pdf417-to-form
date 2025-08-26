@@ -60,7 +60,7 @@ export interface ParsedBarcodeData {
   formType: FormType;
   isValid: boolean;
   errors: string[];
-  data: StandardBarcodeFields & Partial<PatientInfo & InsuranceInfo & ProviderInfo> & Record<string, any>;
+  data: StandardBarcodeFields & Partial<PatientInfo & InsuranceInfo & ProviderInfo> & Record<string, unknown>;
 }
 
 export interface BarcodeFieldDefinition {
@@ -70,7 +70,7 @@ export interface BarcodeFieldDefinition {
   maxLength?: number;
   allowedValues?: string[];
   required?: boolean;
-  transform?: (value: string) => any;
+  transform?: (value: string) => unknown;
 }
 
 export interface FormSchema {

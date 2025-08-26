@@ -5,7 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Camera, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Camera, Upload, X } from 'lucide-react';
 import { barcodeScanner } from '@/lib/barcode-scanner';
 import { altBarcodeScanner } from '@/lib/barcode-scanner-alt';
 import { Button } from '@/components/ui/button';
@@ -149,7 +149,7 @@ export function ImageDropzone({ onBarcodeScanned, className }: ImageDropzoneProp
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Drop the image here</p>
                   <p className="text-xs text-muted-foreground">
-                    We'll scan it for PDF417 barcodes
+                    We&apos;ll scan it for PDF417 barcodes
                   </p>
                 </div>
               ) : (

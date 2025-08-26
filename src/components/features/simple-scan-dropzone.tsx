@@ -110,7 +110,7 @@ export function SimpleScanDropzone({ onScanSuccess, className }: SimpleScanDropz
             <div className="space-y-2">
               <p className="text-lg font-medium">Drop your image here</p>
               <p className="text-sm text-muted-foreground">
-                We'll scan for PDF417 barcodes automatically
+                We&apos;ll scan for PDF417 barcodes automatically
               </p>
             </div>
           ) : (

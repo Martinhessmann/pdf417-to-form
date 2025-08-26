@@ -31,7 +31,7 @@ export default function Home() {
     setParsedData(null);
   };
 
-  const handleSaveData = (formData: any) => {
+  const handleSaveData = (formData: Record<string, unknown>) => {
     console.log('[Home] Form data saved:', formData);
     // Here you could send the data to an API, download as PDF, etc.
     // For now, just log it and could show a success message
