@@ -87,8 +87,25 @@ export function SimpleScanDropzone({ onScanSuccess, className }: SimpleScanDropz
             'cursor-not-allowed opacity-60': isLoading,
           }
         )}
+        role="button"
+        tabIndex={0}
+        aria-label={isLoading ? "Processing image..." : "Upload healthcare form image"}
+        aria-describedby="dropzone-instructions"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (!isLoading) {
+              // Trigger file input click
+              const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+              input?.click();
+            }
+          }
+        }}
       >
-        <input {...getInputProps()} />
+        <input
+          {...getInputProps()}
+          aria-label="Upload healthcare form image file"
+        />
 
         <div className="space-y-6">
           {/* Icon Section */}
@@ -148,7 +165,10 @@ export function SimpleScanDropzone({ onScanSuccess, className }: SimpleScanDropz
           ) : (
             <div className="space-y-4">
               <h3 className="text-2xl font-bold text-foreground">Upload Healthcare Form</h3>
-              <p className="text-base text-muted-foreground max-w-lg mx-auto leading-relaxed">
+              <p
+                id="dropzone-instructions"
+                className="text-base text-muted-foreground max-w-lg mx-auto leading-relaxed"
+              >
                 Drag and drop an image containing a PDF417 barcode, or click to browse files
               </p>
 

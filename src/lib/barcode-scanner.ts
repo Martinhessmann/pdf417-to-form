@@ -12,7 +12,7 @@ export class BarcodeScanner {
     console.log('[BarcodeScanner] Reader initialized');
   }
 
-  /**
+    /**
    * Scan PDF417 barcode from image file
    */
   async scanFromFile(file: File): Promise<string> {
@@ -25,24 +25,68 @@ export class BarcodeScanner {
         try {
           console.log('[BarcodeScanner] Image loaded:', img.width, 'x', img.height);
 
-          // Use ZXing's built-in method to decode from image element
-          const result = await this.reader.decodeFromImageElement(img);
-          console.log('[BarcodeScanner] Decode successful:', result.getText());
+          // Try multiple scanning approaches for better reliability
+          let result = null;
+          let lastError = null;
 
-          // Clean up the object URL
-          URL.revokeObjectURL(img.src);
-          resolve(result.getText());
-        } catch (error) {
-          console.error('[BarcodeScanner] Decode failed:', error);
-
-          // Clean up the object URL
-          URL.revokeObjectURL(img.src);
-
-          if (error instanceof NotFoundException) {
-            reject(new Error('No PDF417 barcode found in image'));
-          } else {
-            reject(new Error(`Scan failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+          // Method 1: Direct image element scanning
+          try {
+            console.log('[BarcodeScanner] Attempting direct image scanning...');
+            result = await this.reader.decodeFromImageElement(img);
+            if (result) {
+              console.log('[BarcodeScanner] Direct scan successful:', result.getText());
+              URL.revokeObjectURL(img.src);
+              resolve(result.getText());
+              return;
+            }
+          } catch (error) {
+            console.log('[BarcodeScanner] Direct scan failed:', error);
+            lastError = error;
           }
+
+          // Method 2: Canvas-based scanning with preprocessing
+          try {
+            console.log('[BarcodeScanner] Attempting canvas-based scanning...');
+            result = await this.scanFromCanvas(img);
+            if (result) {
+              console.log('[BarcodeScanner] Canvas scan successful:', result);
+              URL.revokeObjectURL(img.src);
+              resolve(result);
+              return;
+            }
+          } catch (error) {
+            console.log('[BarcodeScanner] Canvas scan failed:', error);
+            lastError = error;
+          }
+
+          // Method 3: Try with different image scaling
+          try {
+            console.log('[BarcodeScanner] Attempting scaled image scanning...');
+            result = await this.scanFromScaledCanvas(img);
+            if (result) {
+              console.log('[BarcodeScanner] Scaled scan successful:', result);
+              URL.revokeObjectURL(img.src);
+              resolve(result);
+              return;
+            }
+          } catch (error) {
+            console.log('[BarcodeScanner] Scaled scan failed:', error);
+            lastError = error;
+          }
+
+          // All methods failed
+          console.error('[BarcodeScanner] All scanning methods failed');
+          URL.revokeObjectURL(img.src);
+
+          if (lastError instanceof NotFoundException) {
+            reject(new Error('No PDF417 barcode found in image. Please ensure the barcode is clearly visible and try again.'));
+          } else {
+            reject(new Error(`Scan failed: ${lastError instanceof Error ? lastError.message : 'Unknown error'}`));
+          }
+        } catch (error) {
+          console.error('[BarcodeScanner] Unexpected error:', error);
+          URL.revokeObjectURL(img.src);
+          reject(new Error(`Image processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
         }
       };
 
@@ -55,6 +99,82 @@ export class BarcodeScanner {
       console.log('[BarcodeScanner] Created object URL:', imageUrl);
       img.src = imageUrl;
     });
+  }
+
+  /**
+   * Scan using canvas with image preprocessing
+   */
+  private async scanFromCanvas(img: HTMLImageElement): Promise<string> {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      throw new Error('Failed to get canvas context');
+    }
+
+    // Set canvas size to image size
+    canvas.width = img.width;
+    canvas.height = img.height;
+
+    // Draw image to canvas
+    ctx.drawImage(img, 0, 0);
+
+    // Try to scan the canvas directly
+    try {
+      const result = await this.reader.decodeFromImageElement(canvas);
+      return result.getText();
+    } catch (error) {
+      // If direct canvas scan fails, try with image data processing
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      // Enhance contrast
+      this.enhanceImageContrast(imageData);
+      ctx.putImageData(imageData, 0, 0);
+
+      const result = await this.reader.decodeFromImageElement(canvas);
+      return result.getText();
+    }
+  }
+
+  /**
+   * Scan using scaled canvas for better recognition
+   */
+  private async scanFromScaledCanvas(img: HTMLImageElement): Promise<string> {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      throw new Error('Failed to get canvas context');
+    }
+
+    // Scale up the image for better barcode recognition
+    const scale = 2.0;
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+
+    // Use high quality scaling
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    const result = await this.reader.decodeFromImageElement(canvas);
+    return result.getText();
+  }
+
+  /**
+   * Enhance image contrast for better barcode recognition
+   */
+  private enhanceImageContrast(imageData: ImageData): void {
+    const data = imageData.data;
+    const factor = 1.5; // Contrast factor
+    const intercept = 128 * (1 - factor);
+
+    for (let i = 0; i < data.length; i += 4) {
+      // Apply contrast adjustment to RGB channels
+      data[i] = Math.max(0, Math.min(255, data[i] * factor + intercept));     // R
+      data[i + 1] = Math.max(0, Math.min(255, data[i + 1] * factor + intercept)); // G
+      data[i + 2] = Math.max(0, Math.min(255, data[i + 2] * factor + intercept)); // B
+      // Alpha channel (data[i + 3]) remains unchanged
+    }
   }
 
     /**

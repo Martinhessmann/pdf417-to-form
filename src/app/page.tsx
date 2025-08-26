@@ -11,11 +11,18 @@ type AppState = 'scanning' | 'editing';
 export default function Home() {
   const [appState, setAppState] = useState<AppState>('scanning');
   const [parsedData, setParsedData] = useState<ParsedBarcodeData | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const parser = new PDF417HealthcareParser();
 
-  const handleScanSuccess = (barcodeData: string) => {
+  const handleScanSuccess = async (barcodeData: string) => {
     console.log('[Home] Scan successful, parsing data...');
+    setIsProcessing(true);
+
     try {
+      // Add a small delay to show processing state
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const parsed = parser.parse(barcodeData);
       console.log('[Home] Parse result:', { isValid: parsed.isValid, errors: parsed.errors });
       setParsedData(parsed);
@@ -23,26 +30,50 @@ export default function Home() {
     } catch (error) {
       console.error('[Home] Parse error:', error);
       // Could show an error state here, but for now just stay in scanning mode
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleBackToScan = () => {
     setAppState('scanning');
     setParsedData(null);
+    setSaveStatus('idle');
   };
 
-  const handleSaveData = (formData: Record<string, unknown>) => {
+  const handleSaveData = async (formData: Record<string, unknown>) => {
     console.log('[Home] Form data saved:', formData);
-    // Here you could send the data to an API, download as PDF, etc.
-    // For now, just log it and could show a success message
-    alert('Form data saved successfully!');
+    setSaveStatus('saving');
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Here you could send the data to an API, download as PDF, etc.
+      setSaveStatus('success');
+
+      // Auto-reset status after 3 seconds
+      setTimeout(() => {
+        setSaveStatus('idle');
+      }, 3000);
+
+    } catch (error) {
+      console.error('[Home] Save error:', error);
+      setSaveStatus('error');
+
+      // Auto-reset status after 3 seconds
+      setTimeout(() => {
+        setSaveStatus('idle');
+      }, 3000);
+    }
   };
 
-    return (
+        return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 relative">
       {/* Background pattern */}
       <div
         className="absolute inset-0 opacity-30 dark:opacity-10"
+        aria-hidden="true"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e2e8f0' fill-opacity='0.05'%3E%3Cpolygon points='0,0 0,60 60,0'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           backgroundSize: '60px 60px'
@@ -50,12 +81,12 @@ export default function Home() {
       />
 
       <div className="relative z-10">
-        <div className="container mx-auto py-8 px-4 max-w-7xl">
+        <main className="container mx-auto py-8 px-4 max-w-7xl">
 
           {appState === 'scanning' && (
-            <div className="max-w-3xl mx-auto">
+            <section className="max-w-3xl mx-auto" aria-labelledby="main-heading">
               {/* Header */}
-              <div className="text-center mb-16 animate-fade-in">
+              <header className="text-center mb-16 animate-fade-in">
                 <div className="flex justify-center mb-6">
                   <div className="relative">
                     <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
@@ -73,7 +104,10 @@ export default function Home() {
                   </div>
                 </div>
 
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent">
+                <h1
+                  id="main-heading"
+                  className="text-4xl md:text-5xl font-bold tracking-tight mb-6 bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent"
+                >
                   Healthcare Form Scanner
                 </h1>
                 <p className="text-muted-foreground text-xl mb-4 max-w-2xl mx-auto leading-relaxed">
@@ -86,24 +120,26 @@ export default function Home() {
                   <span className="px-3 py-1 bg-primary/10 text-primary rounded-full">Muster 16</span>
                   <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full">+ more</span>
                 </div>
-              </div>
+              </header>
 
               {/* Scan Dropzone */}
               <div className="animate-slide-up">
                 <SimpleScanDropzone onScanSuccess={handleScanSuccess} />
               </div>
-            </div>
+            </section>
           )}
 
           {appState === 'editing' && parsedData && (
-            <div className="max-w-7xl mx-auto animate-fade-in">
+            <section className="max-w-7xl mx-auto animate-fade-in" aria-labelledby="form-heading">
               {/* Editable Form */}
               <EditableHealthcareForm
                 parsedData={parsedData}
                 onBack={handleBackToScan}
                 onSave={handleSaveData}
+                saveStatus={saveStatus}
+                isProcessing={isProcessing}
               />
-            </div>
+            </section>
           )}
 
           {/* Footer */}
@@ -133,7 +169,7 @@ export default function Home() {
               </div>
             </div>
           </footer>
-        </div>
+        </main>
       </div>
     </div>
   );

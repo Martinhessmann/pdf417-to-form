@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { ParsedBarcodeData } from '@/types/healthcare';
-import { formatDate } from '@/lib/utils';
+import { formatDate, cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -15,6 +15,8 @@ interface EditableHealthcareFormProps {
   parsedData: ParsedBarcodeData;
   onBack: () => void;
   onSave?: (data: Record<string, unknown>) => void;
+  saveStatus?: 'idle' | 'saving' | 'success' | 'error';
+  isProcessing?: boolean;
 }
 
 interface FormField {
@@ -27,7 +29,13 @@ interface FormField {
   section: 'form' | 'patient' | 'insurance' | 'provider' | 'medical';
 }
 
-export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableHealthcareFormProps) {
+export function EditableHealthcareForm({
+  parsedData,
+  onBack,
+  onSave,
+  saveStatus = 'idle',
+  isProcessing = false
+}: EditableHealthcareFormProps) {
   const { formType, isValid, errors, data } = parsedData;
 
   // Convert parsed data to editable form fields
@@ -157,7 +165,10 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
                   <FileText className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                  <h1
+                    id="form-heading"
+                    className="text-3xl font-bold tracking-tight text-foreground"
+                  >
                     Healthcare Form Data
                   </h1>
                   <p className="text-lg text-muted-foreground">{getFormTypeName(formType)}</p>
@@ -262,23 +273,37 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                   {sectionFields.map(field => (
                     <div key={field.index} className="space-y-3 group">
-                      <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <label
+                        htmlFor={`field-${field.index}`}
+                        className="text-sm font-semibold text-foreground flex items-center gap-2"
+                      >
                         {field.fieldNumber && (
-                          <span className="inline-flex items-center justify-center min-w-[28px] h-6 px-2 bg-primary/10 text-primary text-xs font-mono rounded-md border border-primary/20">
+                          <span
+                            className="inline-flex items-center justify-center min-w-[28px] h-6 px-2 bg-primary/10 text-primary text-xs font-mono rounded-md border border-primary/20"
+                            aria-label={`PDF417 field number ${field.fieldNumber}`}
+                          >
                             {field.fieldNumber}
                           </span>
                         )}
                         {field.label}
                         {field.value && (
-                          <div className="w-2 h-2 bg-success rounded-full ml-auto opacity-60" />
+                          <div
+                            className="w-2 h-2 bg-success rounded-full ml-auto opacity-60"
+                            aria-label="Field has value"
+                            role="status"
+                          />
                         )}
                       </label>
 
                       {field.type === 'select' && field.options ? (
                         <select
+                          id={`field-${field.index}`}
+                          name={field.label.toLowerCase().replace(/\s+/g, '_')}
                           value={field.value}
                           onChange={(e) => updateField(field.index, e.target.value)}
                           className="input-enhanced group-hover:border-primary/30"
+                          aria-describedby={field.fieldNumber ? `field-${field.index}-hint` : undefined}
+                          aria-required={field.label.toLowerCase().includes('required')}
                         >
                           <option value="">Select an option...</option>
                           {field.options.map(option => (
@@ -287,6 +312,8 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
                         </select>
                       ) : field.type === 'date' ? (
                         <input
+                          id={`field-${field.index}`}
+                          name={field.label.toLowerCase().replace(/\s+/g, '_')}
                           type="date"
                           value={field.value ? field.value.split('.').reverse().join('-') : ''}
                           onChange={(e) => {
@@ -295,15 +322,30 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
                             updateField(field.index, formatted);
                           }}
                           className="input-enhanced group-hover:border-primary/30"
+                          aria-describedby={field.fieldNumber ? `field-${field.index}-hint` : undefined}
+                          aria-required={field.label.toLowerCase().includes('required')}
                         />
                       ) : (
                         <input
+                          id={`field-${field.index}`}
+                          name={field.label.toLowerCase().replace(/\s+/g, '_')}
                           type="text"
                           value={field.value}
                           onChange={(e) => updateField(field.index, e.target.value)}
                           placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
                           className="input-enhanced group-hover:border-primary/30"
+                          aria-describedby={field.fieldNumber ? `field-${field.index}-hint` : undefined}
+                          aria-required={field.label.toLowerCase().includes('required')}
                         />
+                      )}
+
+                      {field.fieldNumber && (
+                        <div
+                          id={`field-${field.index}-hint`}
+                          className="text-xs text-muted-foreground sr-only"
+                        >
+                          PDF417 field number {field.fieldNumber}
+                        </div>
                       )}
                     </div>
                   ))}
@@ -316,12 +358,31 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
 
       {/* Action Buttons */}
       <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border/50 -mx-6 px-6 py-6 mt-12">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          {/* Status indicator */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-success rounded-full animate-pulse" />
-              <span>Changes auto-saved</span>
-            </div>
+            {saveStatus === 'saving' ? (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-warning rounded-full animate-pulse" />
+                <span className="text-warning">Saving changes...</span>
+              </div>
+            ) : saveStatus === 'success' ? (
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-success" />
+                <span className="text-success font-medium">Changes saved successfully!</span>
+              </div>
+            ) : saveStatus === 'error' ? (
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-destructive" />
+                <span className="text-destructive">Failed to save changes</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-muted-foreground/50 rounded-full" />
+                <span>Ready to save</span>
+              </div>
+            )}
+
             <span className="hidden sm:block">•</span>
             <span className="hidden sm:block">
               {formFields.filter(f => f.value).length} of {formFields.length} fields completed
@@ -332,6 +393,7 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
             <Button
               variant="outline"
               onClick={onBack}
+              disabled={saveStatus === 'saving'}
               className="hover:bg-muted/80"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -341,6 +403,7 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
             <div className="flex gap-2">
               <Button
                 variant="outline"
+                disabled={saveStatus === 'saving'}
                 onClick={() => {
                   // Export functionality
                   const formData = Object.fromEntries(
@@ -363,10 +426,30 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
 
               <Button
                 onClick={handleSave}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-2 shadow-sm"
+                disabled={saveStatus === 'saving'}
+                className={cn(
+                  "flex items-center gap-2 shadow-sm transition-all duration-200",
+                  saveStatus === 'success'
+                    ? "bg-success hover:bg-success/90 text-success-foreground"
+                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                )}
               >
-                <Save className="h-4 w-4" />
-                Save Changes
+                {saveStatus === 'saving' ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : saveStatus === 'success' ? (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Saved!
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
               </Button>
             </div>
           </div>
