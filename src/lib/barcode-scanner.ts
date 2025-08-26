@@ -7,27 +7,20 @@ export class BarcodeScanner {
   private reader: BrowserPDF417Reader;
 
   constructor() {
-    console.log('[BarcodeScanner] Initializing BrowserPDF417Reader...');
     this.reader = new BrowserPDF417Reader();
-    console.log('[BarcodeScanner] Reader initialized');
   }
 
     /**
    * Scan PDF417 barcode from image file
    */
-  async scanFromFile(file: File): Promise<string> {
-    console.log('[BarcodeScanner] Starting scan from file:', file.name, file.type, file.size);
-
+    async scanFromFile(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const img = new Image();
 
       img.onload = async () => {
         try {
-                    console.log('[BarcodeScanner] Image loaded - display:', img.width, 'x', img.height, 'natural:', img.naturalWidth, 'x', img.naturalHeight);
-
           // Resize large images for better barcode detection (like messaging apps do)
           const resizedImg = await this.resizeImageIfNeeded(img);
-          console.log('[BarcodeScanner] Using image dimensions:', resizedImg.width, 'x', resizedImg.height);
 
           // Try multiple scanning approaches for better reliability
           let result = null;
@@ -35,36 +28,29 @@ export class BarcodeScanner {
 
           // Method 1: Direct image element scanning
           try {
-            console.log('[BarcodeScanner] Attempting direct image scanning...');
             result = await this.reader.decodeFromImageElement(resizedImg);
             if (result) {
-              console.log('[BarcodeScanner] Direct scan successful:', result.getText());
               URL.revokeObjectURL(img.src);
               resolve(result.getText());
               return;
             }
           } catch (error) {
-            console.log('[BarcodeScanner] Direct scan failed:', error);
             lastError = error;
           }
 
           // Method 2: Canvas-based scanning with preprocessing
           try {
-            console.log('[BarcodeScanner] Attempting canvas-based scanning...');
             result = await this.scanFromCanvas(resizedImg);
             if (result) {
-              console.log('[BarcodeScanner] Canvas scan successful:', result);
               URL.revokeObjectURL(img.src);
               resolve(result);
               return;
             }
           } catch (error) {
-            console.log('[BarcodeScanner] Canvas scan failed:', error);
             lastError = error;
           }
 
           // All methods failed
-          console.error('[BarcodeScanner] All scanning methods failed');
           URL.revokeObjectURL(img.src);
 
           if (lastError instanceof NotFoundException) {
@@ -73,19 +59,16 @@ export class BarcodeScanner {
             reject(new Error(`Scan failed: ${lastError instanceof Error ? lastError.message : 'Unknown error'}`));
           }
         } catch (error) {
-          console.error('[BarcodeScanner] Unexpected error:', error);
           URL.revokeObjectURL(img.src);
           reject(new Error(`Image processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
         }
       };
 
-      img.onerror = (error) => {
-        console.error('[BarcodeScanner] Image load failed:', error);
+      img.onerror = () => {
         reject(new Error('Failed to load image'));
       };
 
       const imageUrl = URL.createObjectURL(file);
-      console.log('[BarcodeScanner] Created object URL:', imageUrl);
       img.src = imageUrl;
     });
   }
@@ -93,9 +76,7 @@ export class BarcodeScanner {
     /**
    * Scan using canvas with image preprocessing
    */
-  private async scanFromCanvas(img: HTMLImageElement): Promise<string> {
-    console.log('[BarcodeScanner] scanFromCanvas - img dimensions:', img.width, 'x', img.height, 'naturalWidth:', img.naturalWidth, 'naturalHeight:', img.naturalHeight);
-
+    private async scanFromCanvas(img: HTMLImageElement): Promise<string> {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -120,12 +101,10 @@ export class BarcodeScanner {
 
     // Try scanning without enhancement first
     try {
-      console.log('[BarcodeScanner] Trying canvas scan without enhancement');
       const result = await this.scanImageData(imageData);
       return result;
     } catch (error) {
       // If that fails, try with contrast enhancement
-      console.log('[BarcodeScanner] Trying canvas scan with contrast enhancement');
       this.enhanceImageContrast(imageData);
 
       // Put the enhanced data back on canvas for processing
@@ -176,8 +155,6 @@ export class BarcodeScanner {
    * Scan ImageData by converting canvas to image element that ZXing can process
    */
   private async scanImageData(imageData: ImageData): Promise<string> {
-    console.log(`[BarcodeScanner] Processing ImageData: ${imageData.width}x${imageData.height}, data length: ${imageData.data.length}`);
-
     return new Promise((resolve, reject) => {
       // Create a new canvas and put the ImageData on it
       const tempCanvas = document.createElement('canvas');
@@ -194,21 +171,16 @@ export class BarcodeScanner {
 
       // Convert canvas to data URL
       const dataURL = tempCanvas.toDataURL('image/png');
-      console.log(`[BarcodeScanner] Created data URL, length: ${dataURL.length}`);
 
       // Create image element from data URL
       const img = new Image();
 
       img.onload = async () => {
         try {
-          console.log(`[BarcodeScanner] Image element loaded: ${img.width}x${img.height}`);
-
           // Use ZXing's built-in method to scan the image element
           const result = await this.reader.decodeFromImageElement(img);
-          console.log('[BarcodeScanner] Decode successful via converted image');
           resolve(result.getText());
         } catch (error) {
-          console.error('[BarcodeScanner] Image element decode error:', error);
           reject(error);
         }
       };
@@ -402,13 +374,6 @@ export class BarcodeScanner {
       navigator.mediaDevices &&
       typeof navigator.mediaDevices.getUserMedia === 'function';
 
-    console.log('[BarcodeScanner] Camera support check:', {
-      isSecureContext,
-      hasMediaDevices,
-      protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown',
-      hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown'
-    });
-
     return isSecureContext && hasMediaDevices;
   }
 
@@ -416,21 +381,16 @@ export class BarcodeScanner {
    * Scan PDF417 barcode from camera stream
    */
   async scanFromCamera(): Promise<string> {
-    console.log('[BarcodeScanner] Starting camera scan...');
-
     // Enhanced camera support detection
     if (!this.isCameraSupported()) {
       const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
       const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
       if (!isHttps && !isLocalhost) {
-        console.error('[BarcodeScanner] Camera requires HTTPS');
         throw new Error('Camera access requires HTTPS. Please use HTTPS or localhost.');
       } else if (!navigator.mediaDevices?.getUserMedia) {
-        console.error('[BarcodeScanner] MediaDevices API not supported');
         throw new Error('Camera access not supported by this browser. Please use a modern browser with camera support.');
       } else {
-        console.error('[BarcodeScanner] Camera not supported for unknown reason');
         throw new Error('Camera access not available.');
       }
     }
@@ -448,8 +408,6 @@ export class BarcodeScanner {
       };
 
       try {
-        console.log('[BarcodeScanner] Requesting camera access...');
-
         // Request camera access with mobile-optimized settings
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -458,8 +416,6 @@ export class BarcodeScanner {
             height: { ideal: 720, min: 480 }
           }
         });
-
-        console.log('[BarcodeScanner] Camera access granted');
 
         // Create video element
         video = document.createElement('video');
@@ -471,7 +427,6 @@ export class BarcodeScanner {
         await new Promise((resolve) => {
           video!.onloadedmetadata = () => {
             video!.play();
-            console.log('[BarcodeScanner] Video ready:', video!.videoWidth, 'x', video!.videoHeight);
             resolve(undefined);
           };
         });
@@ -490,14 +445,12 @@ export class BarcodeScanner {
           }
 
           scanCount++;
-          console.log(`[BarcodeScanner] Scanning frame ${scanCount}/${maxScans}`);
 
           try {
             // Use the same method as image scanning for consistency
             const result = await this.reader.decodeFromImageElement(video);
 
             if (result && result.getText) {
-              console.log('[BarcodeScanner] Camera scan successful:', result.getText());
               cleanup();
               document.body.removeChild(video);
               resolve(result.getText());
@@ -527,8 +480,6 @@ export class BarcodeScanner {
           document.body.removeChild(video);
         }
 
-        console.error('[BarcodeScanner] Camera setup failed:', error);
-
         if (error instanceof NotFoundException) {
           reject(new Error('No PDF417 barcode found'));
         } else if (error && typeof error === 'object' && 'name' in error && error.name === 'NotAllowedError') {
@@ -546,15 +497,11 @@ export class BarcodeScanner {
    * Scan PDF417 barcode from image element
    */
   async scanFromImageElement(imgElement: HTMLImageElement): Promise<string> {
-    console.log('[BarcodeScanner] Scanning from image element:', imgElement.width, 'x', imgElement.height);
-
     try {
       // Use ZXing's built-in method to decode from image element
       const result = await this.reader.decodeFromImageElement(imgElement);
-      console.log('[BarcodeScanner] Element scan successful:', result.getText());
       return result.getText();
     } catch (error) {
-      console.error('[BarcodeScanner] Element scan failed:', error);
       if (error instanceof NotFoundException) {
         throw new Error('No PDF417 barcode found in image');
       }
@@ -565,7 +512,7 @@ export class BarcodeScanner {
   /**
    * Resize large images to optimal size for barcode scanning (like messaging apps do)
    */
-  private async resizeImageIfNeeded(img: HTMLImageElement): Promise<HTMLImageElement> {
+    private async resizeImageIfNeeded(img: HTMLImageElement): Promise<HTMLImageElement> {
     const MAX_WIDTH = 1200;
     const MAX_HEIGHT = 1600;
 
@@ -574,11 +521,8 @@ export class BarcodeScanner {
 
     // If image is already small enough, return as-is
     if (width <= MAX_WIDTH && height <= MAX_HEIGHT) {
-      console.log('[BarcodeScanner] Image size OK, no resizing needed');
       return img;
     }
-
-    console.log(`[BarcodeScanner] Large image detected (${width}x${height}), resizing for better barcode detection...`);
 
     // Calculate new dimensions maintaining aspect ratio
     let newWidth = width;
@@ -593,8 +537,6 @@ export class BarcodeScanner {
       newWidth = (newWidth * MAX_HEIGHT) / newHeight;
       newHeight = MAX_HEIGHT;
     }
-
-    console.log(`[BarcodeScanner] Resizing to: ${Math.round(newWidth)}x${Math.round(newHeight)}`);
 
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
@@ -613,14 +555,12 @@ export class BarcodeScanner {
       // Convert back to image element
       canvas.toBlob((blob) => {
         if (!blob) {
-          console.warn('[BarcodeScanner] Resize failed, using original image');
           resolve(img);
           return;
         }
 
         const resizedImg = new Image();
         resizedImg.onload = () => {
-          console.log(`[BarcodeScanner] ✅ Resized successfully: ${resizedImg.width}x${resizedImg.height}`);
           resolve(resizedImg);
         };
         resizedImg.src = URL.createObjectURL(blob);

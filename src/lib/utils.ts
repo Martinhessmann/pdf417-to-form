@@ -5,13 +5,23 @@ export function cn(...classes: (string | undefined | null | boolean)[]): string 
 }
 
 export function formatDate(dateStr: string | null | undefined): string | null {
-  if (!dateStr || dateStr === '00000000' || dateStr.length !== 8) return null;
+  if (!dateStr || dateStr === '00000000') return null;
 
-  const year = dateStr.substring(0, 4);
-  const month = dateStr.substring(4, 6);
-  const day = dateStr.substring(6, 8);
+  // Handle ISO format dates (YYYY-MM-DD)
+  if (dateStr.includes('-') && dateStr.length === 10) {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}.${month}.${year}`;
+  }
 
-  return `${day}.${month}.${year}`;
+  // Handle 8-digit format dates (YYYYMMDD)
+  if (dateStr.length === 8) {
+    const year = dateStr.substring(0, 4);
+    const month = dateStr.substring(4, 6);
+    const day = dateStr.substring(6, 8);
+    return `${day}.${month}.${year}`;
+  }
+
+  return null;
 }
 
 export function parseGermanDate(dateStr: string): string | null {

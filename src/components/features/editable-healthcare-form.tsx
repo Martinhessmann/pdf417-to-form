@@ -44,7 +44,7 @@ export function EditableHealthcareForm({
 
     // Form Information
     fields.push(
-      { label: 'Form Type', value: data.formularcode || '', fieldNumber: 1, section: 'form', type: 'select', options: ['6', '10', '12', '16'] },
+      { label: 'Form Type', value: data.formularcode || '', fieldNumber: 1, section: 'form', type: 'select', options: ['06', '10', '12', '16'] },
       { label: 'Form Supplement', value: data.formularcodeergaenzung || '', fieldNumber: 2, section: 'form' },
       { label: 'Version', value: data.versionsnummer || '', fieldNumber: 3, section: 'form' }
     );
@@ -74,7 +74,8 @@ export function EditableHealthcareForm({
       { label: 'Insurance Type', value: data.versichertenart || '', fieldNumber: 10, section: 'insurance', type: 'select', options: ['1', '3', '5'] },
       { label: 'Coverage End Date', value: formatDate(data.versicherungsschutzEnde) || '', fieldNumber: 7, section: 'insurance', type: 'date' },
       { label: 'Special Person Group', value: data.besonderePersonengruppe || '', fieldNumber: 11, section: 'insurance', type: 'select', options: ['00', '04', '06', '07', '08', '09'] },
-      { label: 'DMP Identifier', value: data.dmpKennzeichnung || '', fieldNumber: 12, section: 'insurance', placeholder: '2-digit code' }
+      { label: 'DMP Identifier', value: data.dmpKennzeichnung || '', fieldNumber: 12, section: 'insurance', placeholder: '2-digit code' },
+      { label: 'WOP Identifier', value: data.wopKennzeichen || '', fieldNumber: '10*', section: 'insurance', placeholder: 'WOP identification' }
     );
 
     // Provider Information
