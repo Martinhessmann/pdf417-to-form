@@ -41,14 +41,14 @@ export default function Home() {
     return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 relative">
       {/* Background pattern */}
-      <div 
-        className="absolute inset-0 opacity-30 dark:opacity-10" 
+      <div
+        className="absolute inset-0 opacity-30 dark:opacity-10"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e2e8f0' fill-opacity='0.05'%3E%3Cpolygon points='0,0 0,60 60,0'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           backgroundSize: '60px 60px'
         }}
       />
-      
+
       <div className="relative z-10">
         <div className="container mx-auto py-8 px-4 max-w-7xl">
 

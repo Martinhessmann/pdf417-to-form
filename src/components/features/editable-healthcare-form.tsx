@@ -242,7 +242,7 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
         {Object.entries(sectionTitles).map(([section, title], sectionIndex) => {
           const sectionFields = groupedFields[section];
           if (!sectionFields || sectionFields.length === 0) return null;
-          
+
           const SectionIcon = sectionIcons[section as keyof typeof sectionIcons];
 
           return (
@@ -327,20 +327,20 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
               {formFields.filter(f => f.value).length} of {formFields.length} fields completed
             </span>
           </div>
-          
+
           <div className="flex gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={onBack}
               className="hover:bg-muted/80"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Scan
             </Button>
-            
+
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   // Export functionality
                   const formData = Object.fromEntries(
@@ -349,7 +349,7 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
                   const dataStr = JSON.stringify(formData, null, 2);
                   const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
                   const exportFileDefaultName = `healthcare-form-${formType}-${new Date().toISOString().split('T')[0]}.json`;
-                  
+
                   const linkElement = document.createElement('a');
                   linkElement.setAttribute('href', dataUri);
                   linkElement.setAttribute('download', exportFileDefaultName);
@@ -360,9 +360,9 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
-              
-              <Button 
-                onClick={handleSave} 
+
+              <Button
+                onClick={handleSave}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-2 shadow-sm"
               >
                 <Save className="h-4 w-4" />
