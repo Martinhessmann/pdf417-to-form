@@ -1,36 +1,170 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PDF417 Healthcare Form Parser
+
+A Next.js application for parsing PDF417 barcodes from German healthcare forms (Blankoformularbedruckung) including Muster 10, 6, 12, and 16.
+
+## Features
+
+🏥 **Healthcare Form Support**
+- **Muster 10**: Laboratory Request Forms
+- **Muster 6**: Referral Forms
+- **Muster 12**: Nursing Care Requests
+- **Muster 16**: Rehabilitation Requests
+
+📱 **Multiple Input Methods**
+- **Image Upload**: Drag & drop or select image files
+- **Camera Scan**: Mobile camera support with environment facing camera
+- **Manual Input**: Direct text input for tab-separated barcode data
+
+🎨 **Modern UI**
+- Responsive design (mobile-first)
+- Light/dark theme support
+- Professional healthcare-focused interface
+- Real-time validation and error handling
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18.17.0 or higher
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd pdf417-to-form
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Usage
+
+### Scanning from Images
+
+1. Click on the **"Scan Image"** tab
+2. **Drag & drop** an image file or **click to select**
+3. On mobile devices, use the **"Use Camera"** button to capture directly
+4. The app will automatically detect and parse PDF417 barcodes
+
+### Manual Input
+
+1. Click on the **"Manual Input"** tab
+2. Paste tab-separated barcode data into the textarea
+3. Click **"Load Sample"** to see example data
+4. Click **"Parse Barcode"** to process the data
+
+## Supported File Formats
+
+- PNG, JPG, JPEG, GIF, BMP, WebP
+- Higher resolution images work better
+- Ensure barcodes are clearly visible and well-lit
+
+## Architecture
+
+### Core Components
+
+- **`PDF417HealthcareParser`**: Core parsing engine with form-specific schemas
+- **`BarcodeScanner`**: Image processing and ZXing integration
+- **`ImageDropzone`**: Drag & drop and camera functionality
+- **`HealthcareForm`**: Structured display of parsed data
+
+### Key Technologies
+
+- **Next.js 15** with App Router
+- **TypeScript** for type safety
+- **Tailwind CSS** for styling
+- **@zxing/browser** for barcode scanning
+- **react-dropzone** for file handling
+- **Lucide React** for icons
+
+## Form Field Mapping
+
+### Standard Fields (All Forms)
+- `formularcode`: 2-digit form number
+- `formularcodeergaenzung`: Form supplement code
+- `versionsnummer`: Barcode version number
+
+### Patient Information
+- Name, birth date, gender, address
+- Title, postal code, city, street
+
+### Insurance Information
+- Provider ID and name
+- Insured person ID and type
+- Coverage dates and special groups
+
+### Provider Information
+- Practice and physician IDs
+- Referral information
+- Issue dates
+
+## Data Validation
+
+The parser validates:
+- ✅ Required form identification fields
+- ✅ Date formats (YYYYMMDD)
+- ✅ Insurance type values (1, 3, 5)
+- ✅ Gender values (M, W, X, D)
+- ✅ Field length constraints
+
+## Browser Support
+
+- **Desktop**: Chrome, Firefox, Safari, Edge
+- **Mobile**: iOS Safari, Chrome Mobile, Samsung Internet
+- **Camera**: Requires HTTPS in production
+
+## Development
+
+### Project Structure
+
+```
+src/
+├── app/                 # Next.js App Router
+├── components/
+│   ├── ui/             # Reusable UI components
+│   └── features/       # Feature-specific components
+├── lib/                # Utility functions & parsers
+└── types/              # TypeScript definitions
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Adding New Form Types
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Define the form schema in `PDF417HealthcareParser`
+2. Add field mappings in the appropriate `getMusterXSchema()` method
+3. Update TypeScript types in `types/healthcare.ts`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Build for Production
 
-## Learn More
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Contributing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
+This project is licensed under the MIT License.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Acknowledgments
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- German healthcare form standards (Blankoformularbedruckung)
+- ZXing library for barcode scanning
+- Next.js and Vercel teams

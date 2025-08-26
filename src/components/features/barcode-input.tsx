@@ -6,10 +6,13 @@
 import { useState } from 'react';
 import { PDF417HealthcareParser } from '@/lib/pdf417-parser';
 import { ParsedBarcodeData } from '@/types/healthcare';
+import { ImageDropzone } from './image-dropzone';
+import { ZXingTest } from './zxing-test';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Keyboard, Camera } from 'lucide-react';
 
 interface BarcodeInputProps {
   onDataParsed: (data: ParsedBarcodeData | null) => void;
@@ -19,32 +22,10 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
   const [barcodeText, setBarcodeText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'manual' | 'image'>('image');
   const parser = new PDF417HealthcareParser();
 
-  const handleParse = async () => {
-    if (!barcodeText.trim()) {
-      setError('Please enter barcode data');
-      return;
-    }
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const parsed = parser.parse(barcodeText.trim());
-      onDataParsed(parsed);
-
-      if (!parsed.isValid) {
-        setError('Barcode data is invalid or incomplete');
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to parse barcode data';
-      setError(errorMessage);
-      onDataParsed(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleClear = () => {
     setBarcodeText('');
@@ -91,6 +72,39 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
     setError(null);
   };
 
+    const handleImageScan = (barcodeData: string) => {
+    setBarcodeText(barcodeData);
+    setError(null);
+    handleParse(barcodeData);
+  };
+
+  const handleParse = async (data?: string) => {
+    const textToProcess = data || barcodeText.trim();
+
+    if (!textToProcess) {
+      setError('Please enter barcode data or scan an image');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const parsed = parser.parse(textToProcess);
+      onDataParsed(parsed);
+
+      if (!parsed.isValid) {
+        setError('Barcode data is invalid or incomplete');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to parse barcode data';
+      setError(errorMessage);
+      onDataParsed(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const supportedForms = parser.getSupportedForms();
 
   return (
@@ -107,7 +121,7 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
           </Button>
         </CardTitle>
         <CardDescription>
-          Enter PDF417 barcode data (tab-separated values) to parse healthcare form information
+          Scan from image or enter PDF417 barcode data to parse healthcare form information
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -124,23 +138,89 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
           </div>
         </div>
 
-        {/* Input Area */}
-        <div className="space-y-2">
-          <label htmlFor="barcode-input" className="text-sm font-medium">
-            Barcode Data (Tab-separated):
-          </label>
-          <Textarea
-            id="barcode-input"
-            placeholder="Paste or enter tab-separated barcode data here..."
-            value={barcodeText}
-            onChange={(e) => setBarcodeText(e.target.value)}
-            rows={4}
-            className="font-mono text-xs"
-          />
-          <div className="text-xs text-muted-foreground">
-            Example: 10	a	01	REQ123	Mustermann	Max	19850615	...
-          </div>
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 p-1 bg-muted rounded-lg">
+          <button
+            onClick={() => setActiveTab('image')}
+            className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'image'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Camera className="h-4 w-4 inline mr-2" />
+            Scan Image
+          </button>
+          <button
+            onClick={() => setActiveTab('manual')}
+            className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'manual'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Keyboard className="h-4 w-4 inline mr-2" />
+            Manual Input
+          </button>
         </div>
+
+        {/* Tab Content */}
+        {activeTab === 'image' ? (
+          <ImageDropzone onBarcodeScanned={handleImageScan} />
+        ) : (
+          <div className="space-y-4">
+
+                    {/* Input Area */}
+            <div className="space-y-2">
+              <label htmlFor="barcode-input" className="text-sm font-medium">
+                Barcode Data (Tab-separated):
+              </label>
+              <Textarea
+                id="barcode-input"
+                placeholder="Paste or enter tab-separated barcode data here..."
+                value={barcodeText}
+                onChange={(e) => setBarcodeText(e.target.value)}
+                rows={4}
+                className="font-mono text-xs"
+              />
+              <div className="text-xs text-muted-foreground">
+                Example: 10	a	01	REQ123	Mustermann	Max	19850615	...
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handleParse()}
+                disabled={isLoading || !barcodeText.trim()}
+              >
+                {isLoading ? 'Parsing...' : 'Parse Barcode'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleClear}
+                disabled={!barcodeText && !error}
+              >
+                Clear
+              </Button>
+            </div>
+
+            {/* Data Preview */}
+            {barcodeText && (
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm">Data Preview:</h4>
+                <div className="rounded border p-2 bg-muted/50 text-xs font-mono max-h-20 overflow-y-auto">
+                  {barcodeText.split('\t').map((field, index) => (
+                    <div key={index} className="flex">
+                      <span className="w-8 text-muted-foreground">{index}:</span>
+                      <span className="break-all">{field || '(empty)'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Error Display */}
         {error && (
@@ -149,37 +229,8 @@ export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
           </Alert>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button
-            onClick={handleParse}
-            disabled={isLoading || !barcodeText.trim()}
-          >
-            {isLoading ? 'Parsing...' : 'Parse Barcode'}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleClear}
-            disabled={!barcodeText && !error}
-          >
-            Clear
-          </Button>
-        </div>
-
-        {/* Data Preview */}
-        {barcodeText && (
-          <div className="space-y-2">
-            <h4 className="font-medium text-sm">Data Preview:</h4>
-            <div className="rounded border p-2 bg-muted/50 text-xs font-mono max-h-20 overflow-y-auto">
-              {barcodeText.split('\t').map((field, index) => (
-                <div key={index} className="flex">
-                  <span className="w-8 text-muted-foreground">{index}:</span>
-                  <span className="break-all">{field || '(empty)'}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Debug Test Component */}
+        <ZXingTest />
       </CardContent>
     </Card>
   );
