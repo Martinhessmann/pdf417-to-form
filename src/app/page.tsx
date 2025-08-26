@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ParsedBarcodeData } from '@/types/healthcare';
 import { BarcodeInput } from '@/components/features/barcode-input';
 import { HealthcareForm } from '@/components/features/healthcare-form';
+import WebcamCapture from '@/components/features/webcam-capture';
 
 export default function Home() {
   const [parsedData, setParsedData] = useState<ParsedBarcodeData | null>(null);
@@ -16,17 +17,7 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4 max-w-6xl">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
-            PDF417 Healthcare Form Parser
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Parse PDF417 barcodes from German healthcare forms (Blankoformularbedruckung)
-          </p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Supports Muster 10 (Lab Request), Muster 6 (Referral), Muster 12 (Nursing Care), and more
-          </p>
-        </div>
+        <WebcamCapture />
 
         {/* Main Content */}
         <div className="space-y-8">
