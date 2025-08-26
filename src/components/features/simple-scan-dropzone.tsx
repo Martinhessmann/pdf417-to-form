@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Camera, Upload, AlertCircle } from 'lucide-react';
 import { barcodeScanner } from '@/lib/barcode-scanner';
@@ -19,6 +19,7 @@ interface SimpleScanDropzoneProps {
 export function SimpleScanDropzone({ onScanSuccess, className }: SimpleScanDropzoneProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   const handleImageScan = async (file: File) => {
     setIsLoading(true);
@@ -72,7 +73,13 @@ export function SimpleScanDropzone({ onScanSuccess, className }: SimpleScanDropz
     disabled: isLoading
   });
 
-  const isMobile = typeof window !== 'undefined' && /Mobi|Android/i.test(navigator.userAgent);
+  // Detect mobile after component mounts to avoid hydration mismatch
+  useEffect(() => {
+    const checkIsMobile = () => {
+      return typeof window !== 'undefined' && /Mobi|Android/i.test(navigator.userAgent);
+    };
+    setIsMobile(checkIsMobile());
+  }, []);
 
   return (
     <div className={cn('w-full space-y-6', className)}>

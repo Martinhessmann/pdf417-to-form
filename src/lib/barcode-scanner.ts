@@ -1,7 +1,7 @@
 // Purpose: Barcode scanner utility for extracting PDF417 codes from images
 // Uses ZXing library to decode barcodes from image files and camera streams
 
-import { BrowserPDF417Reader, NotFoundException } from '@zxing/library';
+import { BrowserPDF417Reader, NotFoundException, RGBLuminanceSource, HybridBinarizer, BinaryBitmap } from '@zxing/library';
 
 export class BarcodeScanner {
   private reader: BrowserPDF417Reader;
@@ -74,6 +74,36 @@ export class BarcodeScanner {
             lastError = error;
           }
 
+          // Method 4: Try with different resolutions (for large images)
+          try {
+            console.log('[BarcodeScanner] Attempting multi-resolution scanning...');
+            result = await this.scanMultiResolution(img);
+            if (result) {
+              console.log('[BarcodeScanner] Multi-resolution scan successful:', result);
+              URL.revokeObjectURL(img.src);
+              resolve(result);
+              return;
+            }
+          } catch (error) {
+            console.log('[BarcodeScanner] Multi-resolution scan failed:', error);
+            lastError = error;
+          }
+
+          // Method 5: Try with cropped regions (for large images)
+          try {
+            console.log('[BarcodeScanner] Attempting cropped region scanning...');
+            result = await this.scanCroppedRegions(img);
+            if (result) {
+              console.log('[BarcodeScanner] Cropped scan successful:', result);
+              URL.revokeObjectURL(img.src);
+              resolve(result);
+              return;
+            }
+          } catch (error) {
+            console.log('[BarcodeScanner] Cropped scan failed:', error);
+            lastError = error;
+          }
+
           // All methods failed
           console.error('[BarcodeScanner] All scanning methods failed');
           URL.revokeObjectURL(img.src);
@@ -101,7 +131,7 @@ export class BarcodeScanner {
     });
   }
 
-  /**
+    /**
    * Scan using canvas with image preprocessing
    */
   private async scanFromCanvas(img: HTMLImageElement): Promise<string> {
@@ -119,24 +149,22 @@ export class BarcodeScanner {
     // Draw image to canvas
     ctx.drawImage(img, 0, 0);
 
-    // Try to scan the canvas directly
+    // Get image data and process it manually
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // Try scanning without enhancement first
     try {
-      const result = await this.reader.decodeFromImageElement(canvas);
-      return result.getText();
+      const result = await this.scanImageData(imageData);
+      return result;
     } catch (error) {
-      // If direct canvas scan fails, try with image data processing
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-      // Enhance contrast
+      // If that fails, try with contrast enhancement
       this.enhanceImageContrast(imageData);
-      ctx.putImageData(imageData, 0, 0);
-
-      const result = await this.reader.decodeFromImageElement(canvas);
-      return result.getText();
+      const result = await this.scanImageData(imageData);
+      return result;
     }
   }
 
-  /**
+    /**
    * Scan using scaled canvas for better recognition
    */
   private async scanFromScaledCanvas(img: HTMLImageElement): Promise<string> {
@@ -152,12 +180,180 @@ export class BarcodeScanner {
     canvas.width = img.width * scale;
     canvas.height = img.height * scale;
 
-    // Use high quality scaling
+    // Use high quality scaling - disable smoothing for sharp edges
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    const result = await this.reader.decodeFromImageElement(canvas);
-    return result.getText();
+    // Get the scaled image data
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // Scan the scaled image data
+    const result = await this.scanImageData(imageData);
+    return result;
+  }
+
+  /**
+   * Scan ImageData using ZXing's lower-level APIs
+   */
+  private async scanImageData(imageData: ImageData): Promise<string> {
+    console.log(`[BarcodeScanner] Processing ImageData: ${imageData.width}x${imageData.height}, data length: ${imageData.data.length}`);
+
+    // Convert RGBA to RGB data (ZXing expects RGB, not RGBA)
+    const rgbData = new Uint8ClampedArray((imageData.width * imageData.height) * 3);
+    for (let i = 0, j = 0; i < imageData.data.length; i += 4, j += 3) {
+      rgbData[j] = imageData.data[i];     // R
+      rgbData[j + 1] = imageData.data[i + 1]; // G
+      rgbData[j + 2] = imageData.data[i + 2]; // B
+      // Skip alpha channel (i + 3)
+    }
+
+    console.log(`[BarcodeScanner] Converted to RGB data, length: ${rgbData.length}`);
+
+    try {
+      // Create luminance source from RGB data
+      const luminanceSource = new RGBLuminanceSource(
+        rgbData,
+        imageData.width,
+        imageData.height
+      );
+
+      console.log('[BarcodeScanner] Luminance source created');
+
+      // Create binary bitmap
+      const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
+      console.log('[BarcodeScanner] Binary bitmap created');
+
+      // Decode the barcode
+      const result = await this.reader.decode(binaryBitmap);
+      console.log('[BarcodeScanner] Decode successful via ImageData');
+      return result.getText();
+    } catch (error) {
+      console.error('[BarcodeScanner] ImageData decode error:', error);
+      throw error;
+    }
+  }
+
+    /**
+   * Try scanning different cropped regions of the image
+   */
+  private async scanCroppedRegions(img: HTMLImageElement): Promise<string> {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      throw new Error('Failed to get canvas context');
+    }
+
+        // Define crop regions to try (as percentages of image dimensions)
+    // Specifically targeted for German healthcare form barcode locations
+    const cropRegions = [
+      // Bottom-right area (most common for German healthcare forms)
+      { name: 'bottom-right', x: 0.4, y: 0.6, width: 0.6, height: 0.4 },
+      // Right side bottom area
+      { name: 'right-bottom', x: 0.5, y: 0.5, width: 0.5, height: 0.5 },
+      // Bottom area centered
+      { name: 'bottom-center', x: 0.2, y: 0.7, width: 0.6, height: 0.3 },
+      // Full bottom third
+      { name: 'bottom-full', x: 0.0, y: 0.65, width: 1.0, height: 0.35 },
+      // Bottom-left area (alternative layout)
+      { name: 'bottom-left', x: 0.0, y: 0.6, width: 0.6, height: 0.4 },
+      // Large bottom area
+      { name: 'bottom-large', x: 0.0, y: 0.5, width: 1.0, height: 0.5 },
+      // Center-right area
+      { name: 'center-right', x: 0.5, y: 0.3, width: 0.5, height: 0.5 },
+      // Full right side
+      { name: 'right-full', x: 0.6, y: 0.0, width: 0.4, height: 1.0 },
+    ];
+
+    for (const region of cropRegions) {
+      try {
+        console.log(`[BarcodeScanner] Trying crop region: ${region.name} (${Math.floor(region.x*100)}%, ${Math.floor(region.y*100)}%, ${Math.floor(region.width*100)}% x ${Math.floor(region.height*100)}%)`);
+
+        // Calculate crop dimensions
+        const cropX = Math.floor(img.width * region.x);
+        const cropY = Math.floor(img.height * region.y);
+        const cropWidth = Math.floor(img.width * region.width);
+        const cropHeight = Math.floor(img.height * region.height);
+
+        console.log(`[BarcodeScanner] Crop dimensions: ${cropWidth}x${cropHeight} at (${cropX}, ${cropY})`);
+
+        // Set canvas to crop size
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
+
+        // Draw cropped region
+        ctx.drawImage(img, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+        // Get image data from the cropped region
+        const imageData = ctx.getImageData(0, 0, cropWidth, cropHeight);
+
+        // Try scanning this region
+        const result = await this.scanImageData(imageData);
+        console.log(`[BarcodeScanner] ✅ Found barcode in region: ${region.name}!`);
+        return result;
+
+      } catch (error) {
+        console.log(`[BarcodeScanner] ❌ No barcode in region: ${region.name}`);
+        // Continue to next region
+        continue;
+      }
+    }
+
+    throw new NotFoundException('No barcode found in any cropped region');
+  }
+
+  /**
+   * Try scanning at different resolutions (for very large images)
+   */
+  private async scanMultiResolution(img: HTMLImageElement): Promise<string> {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      throw new Error('Failed to get canvas context');
+    }
+
+    // Define different resolution scales to try
+    const resolutionScales = [
+      { scale: 0.5, name: '50%' },    // Half resolution - often optimal for barcode recognition
+      { scale: 0.25, name: '25%' },   // Quarter resolution
+      { scale: 0.75, name: '75%' },   // Three-quarter resolution
+      { scale: 1.0, name: '100%' },   // Original resolution
+    ];
+
+    for (const scaleConfig of resolutionScales) {
+      try {
+        const { scale, name } = scaleConfig;
+        console.log(`[BarcodeScanner] Trying resolution: ${name} (${Math.floor(img.width * scale)}x${Math.floor(img.height * scale)})`);
+
+        // Calculate scaled dimensions
+        const scaledWidth = Math.floor(img.width * scale);
+        const scaledHeight = Math.floor(img.height * scale);
+
+        // Set canvas to scaled size
+        canvas.width = scaledWidth;
+        canvas.height = scaledHeight;
+
+        // Use high-quality scaling
+        ctx.imageSmoothingEnabled = false; // For sharp barcode edges
+        ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+
+        // Get image data from the scaled image
+        const imageData = ctx.getImageData(0, 0, scaledWidth, scaledHeight);
+
+        // Try scanning this resolution
+        const result = await this.scanImageData(imageData);
+        console.log(`[BarcodeScanner] ✅ Found barcode at resolution: ${name}!`);
+        return result;
+
+      } catch (error) {
+        console.log(`[BarcodeScanner] ❌ No barcode at resolution: ${scaleConfig.name}`);
+        // Continue to next resolution
+        continue;
+      }
+    }
+
+    throw new NotFoundException('No barcode found at any resolution');
   }
 
   /**
