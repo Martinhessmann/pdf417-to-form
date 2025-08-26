@@ -24,7 +24,7 @@ interface FormField {
   value: string;
   fieldNumber?: number | string;
   placeholder?: string;
-  type?: 'text' | 'date' | 'select';
+  type?: 'text' | 'date' | 'select' | 'textarea';
   options?: string[];
   section: 'form' | 'patient' | 'insurance' | 'provider' | 'medical';
 }
@@ -90,7 +90,7 @@ export function EditableHealthcareForm({
       fields.push(
         { label: 'Diagnosis', value: String(data.diagnose || ''), fieldNumber: '16*', section: 'medical', placeholder: 'Primary diagnosis' },
         { label: 'Order/Assignment', value: String(data.auftrag || ''), fieldNumber: '27*', section: 'medical', placeholder: 'Lab tests, procedures, etc.' },
-        { label: 'Referral Reason', value: String(data.ueberweisungsgrund || ''), fieldNumber: '28*', section: 'medical', placeholder: 'Reason for referral' }
+        { label: 'Referral Reason', value: String(data.ueberweisungsgrund || ''), fieldNumber: '28*', section: 'medical', placeholder: 'Reason for referral', type: 'textarea' }
       );
     }
 
@@ -273,7 +273,9 @@ export function EditableHealthcareForm({
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                   {sectionFields.map(field => (
-                    <div key={field.index} className="space-y-3 group">
+                    <div key={field.index} className={`space-y-3 group ${
+                      field.type === 'textarea' ? 'lg:col-span-2 xl:col-span-3' : ''
+                    }`}>
                       <label
                         htmlFor={`field-${field.index}`}
                         className="text-sm font-semibold text-foreground flex items-center gap-2"
@@ -323,6 +325,18 @@ export function EditableHealthcareForm({
                             updateField(field.index, formatted);
                           }}
                           className="input-enhanced group-hover:border-primary/30"
+                          aria-describedby={field.fieldNumber ? `field-${field.index}-hint` : undefined}
+                          aria-required={field.label.toLowerCase().includes('required')}
+                        />
+                      ) : field.type === 'textarea' ? (
+                        <textarea
+                          id={`field-${field.index}`}
+                          name={field.label.toLowerCase().replace(/\s+/g, '_')}
+                          value={field.value}
+                          onChange={(e) => updateField(field.index, e.target.value)}
+                          placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                          className="input-enhanced group-hover:border-primary/30 min-h-[6rem] resize-y"
+                          rows={4}
                           aria-describedby={field.fieldNumber ? `field-${field.index}-hint` : undefined}
                           aria-required={field.label.toLowerCase().includes('required')}
                         />

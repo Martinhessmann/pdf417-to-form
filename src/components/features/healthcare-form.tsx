@@ -154,7 +154,7 @@ export function HealthcareForm({ parsedData }: HealthcareFormProps) {
             <InfoField label="Diagnosis" value={String(data.diagnose || '')} />
             <InfoField label="Suspected Diagnosis" value={String(data.verdachtsdiagnose || '')} />
             <InfoField label="Assignment/Order" value={String(data.auftrag || '')} />
-            <InfoField label="Referral Reason" value={String(data.ueberweisungsgrund || '')} />
+            <InfoField label="Referral Reason" value={String(data.ueberweisungsgrund || '')} multiline={true} />
             <InfoField label="Copy of Findings" value={String(data.befundkopie || '')} />
             <InfoField label="Curative/Preventive Treatment" value={String(data.kurativePraeventivKur || '')} />
           </CardContent>
@@ -179,19 +179,29 @@ export function HealthcareForm({ parsedData }: HealthcareFormProps) {
 interface InfoFieldProps {
   label: string;
   value?: string | null;
+  multiline?: boolean;
 }
 
-function InfoField({ label, value }: InfoFieldProps) {
+function InfoField({ label, value, multiline = false }: InfoFieldProps) {
   if (!value) return null;
+
+  // Auto-detect if text should be multiline based on length
+  const shouldBeMultiline = multiline || value.length > 60;
 
   return (
     <div className="flex flex-col space-y-1">
       <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
         {label}
       </span>
-      <span className="text-sm font-mono">
-        {value}
-      </span>
+      {shouldBeMultiline ? (
+        <div className="text-sm font-mono bg-muted/30 p-3 rounded-md border min-h-[4rem] whitespace-pre-wrap break-words">
+          {value}
+        </div>
+      ) : (
+        <span className="text-sm font-mono">
+          {value}
+        </span>
+      )}
     </div>
   );
 }
