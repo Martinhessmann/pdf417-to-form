@@ -1,0 +1,186 @@
+// Purpose: Barcode input component for manual entry and parsing of PDF417 data
+// Provides textarea for barcode input and parsing controls
+
+'use client';
+
+import { useState } from 'react';
+import { PDF417HealthcareParser } from '@/lib/pdf417-parser';
+import { ParsedBarcodeData } from '@/types/healthcare';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+interface BarcodeInputProps {
+  onDataParsed: (data: ParsedBarcodeData | null) => void;
+}
+
+export function BarcodeInput({ onDataParsed }: BarcodeInputProps) {
+  const [barcodeText, setBarcodeText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const parser = new PDF417HealthcareParser();
+
+  const handleParse = async () => {
+    if (!barcodeText.trim()) {
+      setError('Please enter barcode data');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const parsed = parser.parse(barcodeText.trim());
+      onDataParsed(parsed);
+
+      if (!parsed.isValid) {
+        setError('Barcode data is invalid or incomplete');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to parse barcode data';
+      setError(errorMessage);
+      onDataParsed(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClear = () => {
+    setBarcodeText('');
+    setError(null);
+    onDataParsed(null);
+  };
+
+  const loadSampleData = () => {
+    // Sample Muster 10 (Laboratory Request) barcode data
+    const sampleData = [
+      '10', // formularcode
+      'a',  // formularcodeergaenzung
+      '01', // versionsnummer
+      'REQ12345', // anforderungsIdent
+      'Mustermann', // nachname
+      'Max', // vorname
+      '19850615', // geburtsdatum
+      '20241231', // versicherungsschutzEnde
+      '123456789', // kostentraegerkennung
+      'AOK Bayern', // kostentraegername
+      'BY', // wopKennzeichen
+      'A123456789', // versichertenId
+      '1', // versichertenart
+      '00', // besonderePersonengruppe
+      '01', // dmpKennzeichnung
+      '123456789', // bsnrErstveranlasser
+      '987654321', // lanrErstveranlasser
+      '123456789', // bsnrUeberweiser
+      '987654321', // lanrUeberweiser
+      '20241226', // ausstellungsdatum
+      'M', // geschlecht
+      'Dr.', // titel
+      '80331', // plz
+      'München', // ort
+      'Maximilianstraße', // strasse
+      '1', // hausnummer
+      'V70.9 - Routineuntersuchung', // diagnose
+      '', // verdachtsdiagnose
+      'Ja', // befundkopie
+      'Blutbild, Leberwerte' // auftrag
+    ].join('\t');
+
+    setBarcodeText(sampleData);
+    setError(null);
+  };
+
+  const supportedForms = parser.getSupportedForms();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          PDF417 Barcode Parser
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadSampleData}
+          >
+            Load Sample
+          </Button>
+        </CardTitle>
+        <CardDescription>
+          Enter PDF417 barcode data (tab-separated values) to parse healthcare form information
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Supported Forms Info */}
+        <div className="rounded-lg bg-muted p-3">
+          <h4 className="font-medium text-sm mb-2">Supported Forms:</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
+            {supportedForms.map(form => (
+              <div key={form.code} className="flex">
+                <span className="font-mono w-8">{form.code}:</span>
+                <span>{form.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Input Area */}
+        <div className="space-y-2">
+          <label htmlFor="barcode-input" className="text-sm font-medium">
+            Barcode Data (Tab-separated):
+          </label>
+          <Textarea
+            id="barcode-input"
+            placeholder="Paste or enter tab-separated barcode data here..."
+            value={barcodeText}
+            onChange={(e) => setBarcodeText(e.target.value)}
+            rows={4}
+            className="font-mono text-xs"
+          />
+          <div className="text-xs text-muted-foreground">
+            Example: 10	a	01	REQ123	Mustermann	Max	19850615	...
+          </div>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          <Button
+            onClick={handleParse}
+            disabled={isLoading || !barcodeText.trim()}
+          >
+            {isLoading ? 'Parsing...' : 'Parse Barcode'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleClear}
+            disabled={!barcodeText && !error}
+          >
+            Clear
+          </Button>
+        </div>
+
+        {/* Data Preview */}
+        {barcodeText && (
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm">Data Preview:</h4>
+            <div className="rounded border p-2 bg-muted/50 text-xs font-mono max-h-20 overflow-y-auto">
+              {barcodeText.split('\t').map((field, index) => (
+                <div key={index} className="flex">
+                  <span className="w-8 text-muted-foreground">{index}:</span>
+                  <span className="break-all">{field || '(empty)'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
