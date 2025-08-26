@@ -57,7 +57,7 @@ export function HealthcareForm({ parsedData }: HealthcareFormProps) {
             </span>
           </CardTitle>
           <CardDescription>
-            Form: {data.formularcode}{data.formularcodeergaenzung} | Version: {data.versionsnummer}
+            Form: {String(data.formularcode)}{String(data.formularcodeergaenzung)} | Version: {String(data.versionsnummer)}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -85,10 +85,10 @@ export function HealthcareForm({ parsedData }: HealthcareFormProps) {
             <CardTitle className="text-lg">Patient Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <InfoField label="Name" value={`${data.vorname || ''} ${data.nachname || ''}`.trim()} />
-            <InfoField label="Birth Date" value={formatDate(data.geburtsdatum)} />
-            <InfoField label="Gender" value={data.geschlecht} />
-            <InfoField label="Title" value={data.titel} />
+            <InfoField label="Name" value={`${String(data.vorname || '')} ${String(data.nachname || '')}`.trim()} />
+            <InfoField label="Birth Date" value={formatDate(String(data.geburtsdatum || ''))} />
+            <InfoField label="Gender" value={String(data.geschlecht || '')} />
+            <InfoField label="Title" value={String(data.titel || '')} />
 
             {(data.strasse || data.hausnummer || data.plz || data.ort) && (
               <>
@@ -97,11 +97,11 @@ export function HealthcareForm({ parsedData }: HealthcareFormProps) {
                 </div>
                 <InfoField
                   label="Street"
-                  value={`${data.strasse || ''} ${data.hausnummer || ''}`.trim()}
+                  value={`${String(data.strasse || '')} ${String(data.hausnummer || '')}`.trim()}
                 />
                 <InfoField
                   label="City"
-                  value={`${data.plz || ''} ${data.ort || ''}`.trim()}
+                  value={`${String(data.plz || '')} ${String(data.ort || '')}`.trim()}
                 />
               </>
             )}
@@ -114,14 +114,14 @@ export function HealthcareForm({ parsedData }: HealthcareFormProps) {
             <CardTitle className="text-lg">Insurance Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <InfoField label="Insurance Provider ID" value={data.kostentraegerkennung} />
-            <InfoField label="Provider Name" value={data.kostentraegername} />
-            <InfoField label="Insured Person ID" value={data.versichertenId} />
-            <InfoField label="Insurance Type" value={data.versichertenart} />
-            <InfoField label="Coverage End Date" value={formatDate(data.versicherungsschutzEnde)} />
-            <InfoField label="Special Person Group" value={data.besonderePersonengruppe} />
-            <InfoField label="DMP Identifier" value={data.dmpKennzeichnung} />
-            <InfoField label="WOP Identifier" value={data.wopKennzeichen} />
+            <InfoField label="Insurance Provider ID" value={String(data.kostentraegerkennung || '')} />
+            <InfoField label="Provider Name" value={String(data.kostentraegername || '')} />
+            <InfoField label="Insured Person ID" value={String(data.versichertenId || '')} />
+            <InfoField label="Insurance Type" value={String(data.versichertenart || '')} />
+            <InfoField label="Coverage End Date" value={formatDate(String(data.versicherungsschutzEnde || ''))} />
+            <InfoField label="Special Person Group" value={String(data.besonderePersonengruppe || '')} />
+            <InfoField label="DMP Identifier" value={String(data.dmpKennzeichnung || '')} />
+            <InfoField label="WOP Identifier" value={String(data.wopKennzeichen || '')} />
           </CardContent>
         </Card>
       </div>
@@ -133,13 +133,13 @@ export function HealthcareForm({ parsedData }: HealthcareFormProps) {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-2">
-            <InfoField label="Issue Date" value={formatDate(data.ausstellungsdatum)} />
-            <InfoField label="Practice Location Number" value={data.betriebsstaettennummer} />
-            <InfoField label="Physician ID (LANR)" value={data.lanr} />
-            <InfoField label="First Requester Practice" value={data.bsnrErstveranlasser} />
-            <InfoField label="First Requester Physician" value={data.lanrErstveranlasser} />
-            <InfoField label="Referring Practice" value={data.bsnrUeberweiser} />
-            <InfoField label="Referring Physician" value={data.lanrUeberweiser} />
+            <InfoField label="Issue Date" value={formatDate(String(data.ausstellungsdatum || ''))} />
+            <InfoField label="Practice Location Number" value={String(data.betriebsstaettennummer || '')} />
+            <InfoField label="Physician ID (LANR)" value={String(data.lanr || '')} />
+            <InfoField label="First Requester Practice" value={String(data.bsnrErstveranlasser || '')} />
+            <InfoField label="First Requester Physician" value={String(data.lanrErstveranlasser || '')} />
+            <InfoField label="Referring Practice" value={String(data.bsnrUeberweiser || '')} />
+            <InfoField label="Referring Physician" value={String(data.lanrUeberweiser || '')} />
           </div>
         </CardContent>
       </Card>
@@ -151,12 +151,12 @@ export function HealthcareForm({ parsedData }: HealthcareFormProps) {
             <CardTitle className="text-lg">Medical Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <InfoField label="Diagnosis" value={data.diagnose} />
-            <InfoField label="Suspected Diagnosis" value={data.verdachtsdiagnose} />
-            <InfoField label="Assignment/Order" value={data.auftrag} />
-            <InfoField label="Referral Reason" value={data.ueberweisungsgrund} />
-            <InfoField label="Copy of Findings" value={data.befundkopie} />
-            <InfoField label="Curative/Preventive Treatment" value={data.kurativePraeventivKur} />
+            <InfoField label="Diagnosis" value={String(data.diagnose || '')} />
+            <InfoField label="Suspected Diagnosis" value={String(data.verdachtsdiagnose || '')} />
+            <InfoField label="Assignment/Order" value={String(data.auftrag || '')} />
+            <InfoField label="Referral Reason" value={String(data.ueberweisungsgrund || '')} />
+            <InfoField label="Copy of Findings" value={String(data.befundkopie || '')} />
+            <InfoField label="Curative/Preventive Treatment" value={String(data.kurativePraeventivKur || '')} />
           </CardContent>
         </Card>
       )}
@@ -168,7 +168,7 @@ export function HealthcareForm({ parsedData }: HealthcareFormProps) {
             <CardTitle className="text-lg">Request Information</CardTitle>
           </CardHeader>
           <CardContent>
-            <InfoField label="Request Identifier" value={data.anforderungsIdent} />
+            <InfoField label="Request Identifier" value={String(data.anforderungsIdent || '')} />
           </CardContent>
         </Card>
       )}

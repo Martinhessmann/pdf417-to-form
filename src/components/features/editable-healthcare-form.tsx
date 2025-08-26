@@ -20,6 +20,7 @@ interface EditableHealthcareFormProps {
 interface FormField {
   label: string;
   value: string;
+  fieldNumber?: number | string;
   placeholder?: string;
   type?: 'text' | 'date' | 'select';
   options?: string[];
@@ -35,52 +36,52 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
 
     // Form Information
     fields.push(
-      { label: 'Form Type', value: data.formularcode || '', section: 'form', type: 'select', options: ['6', '10', '12', '16'] },
-      { label: 'Form Supplement', value: data.formularcodeergaenzung || '', section: 'form' },
-      { label: 'Version', value: data.versionsnummer || '', section: 'form' }
+      { label: 'Form Type', value: data.formularcode || '', fieldNumber: 1, section: 'form', type: 'select', options: ['6', '10', '12', '16'] },
+      { label: 'Form Supplement', value: data.formularcodeergaenzung || '', fieldNumber: 2, section: 'form' },
+      { label: 'Version', value: data.versionsnummer || '', fieldNumber: 3, section: 'form' }
     );
 
     // Patient Information
     fields.push(
-      { label: 'Last Name', value: data.nachname || '', section: 'patient', placeholder: 'Enter last name' },
-      { label: 'First Name', value: data.vorname || '', section: 'patient', placeholder: 'Enter first name' },
-      { label: 'Birth Date', value: formatDate(data.geburtsdatum) || '', section: 'patient', type: 'date' },
-      { label: 'Gender', value: data.geschlecht || '', section: 'patient', type: 'select', options: ['M', 'W', 'X', 'D'] },
-      { label: 'Title', value: data.titel || '', section: 'patient', placeholder: 'Dr., Prof., etc.' }
+      { label: 'Last Name', value: data.nachname || '', fieldNumber: 4, section: 'patient', placeholder: 'Enter last name' },
+      { label: 'First Name', value: data.vorname || '', fieldNumber: 5, section: 'patient', placeholder: 'Enter first name' },
+      { label: 'Birth Date', value: formatDate(data.geburtsdatum) || '', fieldNumber: 6, section: 'patient', type: 'date' },
+      { label: 'Gender', value: data.geschlecht || '', fieldNumber: 18, section: 'patient', type: 'select', options: ['M', 'W', 'X', 'D'] },
+      { label: 'Title', value: data.titel || '', fieldNumber: 19, section: 'patient', placeholder: 'Dr., Prof., etc.' }
     );
 
     // Address
     fields.push(
-      { label: 'Street', value: data.strasse || '', section: 'patient', placeholder: 'Street name' },
-      { label: 'House Number', value: data.hausnummer || '', section: 'patient', placeholder: 'Number' },
-      { label: 'Postal Code', value: data.plz || '', section: 'patient', placeholder: '12345' },
-      { label: 'City', value: data.ort || '', section: 'patient', placeholder: 'City name' }
+      { label: 'Street', value: data.strasse || '', fieldNumber: '23*', section: 'patient', placeholder: 'Street name' },
+      { label: 'House Number', value: data.hausnummer || '', fieldNumber: '24*', section: 'patient', placeholder: 'Number' },
+      { label: 'Postal Code', value: data.plz || '', fieldNumber: 22, section: 'patient', placeholder: '12345' },
+      { label: 'City', value: data.ort || '', fieldNumber: '25*', section: 'patient', placeholder: 'City name' }
     );
 
     // Insurance Information
     fields.push(
-      { label: 'Insurance Provider ID', value: data.kostentraegerkennung || '', section: 'insurance', placeholder: '9-digit ID' },
-      { label: 'Insurance Provider', value: data.kostentraegername || '', section: 'insurance', placeholder: 'AOK, TK, Barmer, etc.' },
-      { label: 'Insured Person ID', value: data.versichertenId || '', section: 'insurance', placeholder: 'A123456789' },
-      { label: 'Insurance Type', value: data.versichertenart || '', section: 'insurance', type: 'select', options: ['1', '3', '5'] },
-      { label: 'Coverage End Date', value: formatDate(data.versicherungsschutzEnde) || '', section: 'insurance', type: 'date' },
-      { label: 'Special Person Group', value: data.besonderePersonengruppe || '', section: 'insurance', type: 'select', options: ['00', '04', '06', '07', '08', '09'] },
-      { label: 'DMP Identifier', value: data.dmpKennzeichnung || '', section: 'insurance', placeholder: '2-digit code' }
+      { label: 'Insurance Provider ID', value: data.kostentraegerkennung || '', fieldNumber: 8, section: 'insurance', placeholder: '9-digit ID' },
+      { label: 'Insurance Provider', value: data.kostentraegername || '', fieldNumber: '26*', section: 'insurance', placeholder: 'AOK, TK, Barmer, etc.' },
+      { label: 'Insured Person ID', value: data.versichertenId || '', fieldNumber: 9, section: 'insurance', placeholder: 'A123456789' },
+      { label: 'Insurance Type', value: data.versichertenart || '', fieldNumber: 10, section: 'insurance', type: 'select', options: ['1', '3', '5'] },
+      { label: 'Coverage End Date', value: formatDate(data.versicherungsschutzEnde) || '', fieldNumber: 7, section: 'insurance', type: 'date' },
+      { label: 'Special Person Group', value: data.besonderePersonengruppe || '', fieldNumber: 11, section: 'insurance', type: 'select', options: ['00', '04', '06', '07', '08', '09'] },
+      { label: 'DMP Identifier', value: data.dmpKennzeichnung || '', fieldNumber: 12, section: 'insurance', placeholder: '2-digit code' }
     );
 
     // Provider Information
     fields.push(
-      { label: 'Issue Date', value: formatDate(data.ausstellungsdatum) || '', section: 'provider', type: 'date' },
-      { label: 'Practice Location Number', value: data.betriebsstaettennummer || data.bsnrErstveranlasser || '', section: 'provider', placeholder: '9-digit BSNR' },
-      { label: 'Physician ID (LANR)', value: data.lanr || data.lanrErstveranlasser || '', section: 'provider', placeholder: '9-digit LANR' }
+      { label: 'Issue Date', value: formatDate(data.ausstellungsdatum) || '', fieldNumber: 15, section: 'provider', type: 'date' },
+      { label: 'Practice Location Number', value: data.betriebsstaettennummer || data.bsnrErstveranlasser || '', fieldNumber: 13, section: 'provider', placeholder: '9-digit BSNR' },
+      { label: 'Physician ID (LANR)', value: data.lanr || data.lanrErstveranlasser || '', fieldNumber: 14, section: 'provider', placeholder: '9-digit LANR' }
     );
 
     // Medical Information
     if (data.diagnose || data.auftrag || data.ueberweisungsgrund) {
       fields.push(
-        { label: 'Diagnosis', value: data.diagnose || '', section: 'medical', placeholder: 'Primary diagnosis' },
-        { label: 'Order/Assignment', value: data.auftrag || '', section: 'medical', placeholder: 'Lab tests, procedures, etc.' },
-        { label: 'Referral Reason', value: data.ueberweisungsgrund || '', section: 'medical', placeholder: 'Reason for referral' }
+        { label: 'Diagnosis', value: String(data.diagnose || ''), fieldNumber: '16*', section: 'medical', placeholder: 'Primary diagnosis' },
+        { label: 'Order/Assignment', value: String(data.auftrag || ''), fieldNumber: '27*', section: 'medical', placeholder: 'Lab tests, procedures, etc.' },
+        { label: 'Referral Reason', value: String(data.ueberweisungsgrund || ''), fieldNumber: '28*', section: 'medical', placeholder: 'Reason for referral' }
       );
     }
 
@@ -173,6 +174,19 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
         </Alert>
       )}
 
+      {/* Field Number Legend */}
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          <div className="space-y-1">
+            <p className="font-semibold">PDF417 Field Numbers (Debugging)</p>
+            <p className="text-sm">
+              Numbers 1-15 are standard fields. Numbers with * are form-specific and vary by Muster type.
+            </p>
+          </div>
+        </AlertDescription>
+      </Alert>
+
       {/* Editable Form Sections */}
       <div className="grid gap-6">
         {Object.entries(sectionTitles).map(([section, title]) => {
@@ -188,7 +202,12 @@ export function EditableHealthcareForm({ parsedData, onBack, onSave }: EditableH
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {sectionFields.map(field => (
                     <div key={field.index} className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">
+                      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        {field.fieldNumber && (
+                          <span className="inline-flex items-center justify-center w-7 h-5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-mono rounded border">
+                            {field.fieldNumber}
+                          </span>
+                        )}
                         {field.label}
                       </label>
 
